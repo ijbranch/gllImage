@@ -18,9 +18,9 @@ Both descend from `TgllCustomImageView`, so they behave identically:
 
 ## Getting started
 
-1. Build `Packages\gllImage.groupproj` (runtime `gllImageR`, design-time `gllImageD`, the tests and the demo).
+1. Build the `LibJxl` package from [libjxl-delphi](https://github.com/ijbranch/libjxl-delphi) first: `gllImageR` requires it.  Then build `Packages\gllImage.groupproj` (runtime `gllImageR`, design-time `gllImageD`, the tests and the demo).
 2. Install `gllImageD` from the 64-bit IDE (`bin64\bds.exe`).  The controls appear on the **gllImage** palette page.
-3. Put `jxl.dll` beside your executable (`D:\gllLibJxl\delphi\CopyJxlDlls.ps1` does it).  It is loaded only when a JPEG XL is decoded or encoded.
+3. Put `jxl.dll` beside your executable ([libjxl-delphi](https://github.com/ijbranch/libjxl-delphi)'s `CopyJxlDlls.ps1` does it).  It is loaded only when a JPEG XL is decoded or encoded.
 
 ```pascal
 gllImageView1.FitToWindow := True;
@@ -44,3 +44,7 @@ Run `Demo\gllImageDemo` to see both controls, with two JPEG XL samples.
 ## Origin
 
 gllImage grew from GDBImage (Sebastián Mayorá's freeware enhanced `TDBImage`, later Roy Lambert's EDBImage), which lived inside GITLAKDB as `TGDBImage` until 2026-10-19.  A form that still names `TGDBImage` streams in as `TgllDBImage`.
+
+## How gllImage was developed
+
+gllImage was developed with substantial assistance from an AI coding assistant (Anthropic's Claude), under the maintainer's direction and review.  It is tested as described in [Help.md](Help.md).

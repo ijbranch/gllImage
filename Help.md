@@ -16,20 +16,21 @@ Building, deploying, and the things that look wrong and are not.  For how to use
 | `Source\gllImage.Consts.pas` | Resource strings and constants |
 | `Source\gllImage.Register.pas` + `.dcr` | Palette registration and icons (design-time only) |
 | `Packages\gllImageR` / `gllImageD` | Runtime and design-time packages; `gllImage.groupproj` builds both, the tests and the demo |
-| `Tests\gllImageTests` | DUnitX suite (GITLAKMCP target `gllImageTests`) |
+| `Tests\gllImageTests` | DUnitX suite (console runner; results in `gllImageTests-results.xml`) |
 | `Demo\gllImageDemo` | Both controls side by side, with `Sample-Landscape.jxl` (lossy) and `Sample-Portrait.jxl` (lossless) |
 
 ## 2. Building
 
 - Build the packages in all four modes (Win32 / Win64 × Debug / Release), runtime before design-time, Release last.  The group project lists them in that order and makes `gllImageD` depend on `gllImageR`.
 - Outputs follow the estate standard: BPL / DCP in `$(BDSCOMMONDIR)\Bpl|Dcp\<Platform>` (Release) and `...\<Platform>\Debug`; DCUs project-local.
-- `gllImageR` **requires `LibJxl`** (`D:\gllLibJxl\delphi\Packages`); build LibJxl first if its DCP is missing (`E2202 Required package 'LibJxl' not found`).
-- An application compiling the source needs **both** `D:\gllImage\Source` and `D:\gllLibJxl\delphi\Source` on its search path.
+- `gllImageR` **requires `LibJxl`**, the package of [libjxl-delphi](https://github.com/ijbranch/libjxl-delphi); build it first if its DCP is missing (`E2202 Required package 'LibJxl' not found`).
+- An application compiling the source needs **both** gllImage's `Source` folder and libjxl-delphi's `Source` folder on its search path.
+- **The tests and the demo look for libjxl-delphi at `D:\gllLibJxl\delphi`** (search path, and the post-build step that runs its `CopyJxlDlls.ps1`).  With it elsewhere, change both in `Tests\gllImageTests.dproj` and `Demo\gllImageDemo.dproj`.
 - Install `gllImageD` from `bin64\bds.exe` only.  If a form reports `Class TgllDBImage not found`, the package is not installed: **never click Ignore** (saving would remove the control from the `.dfm`).
 
 ## 3. Deploying: `jxl.dll`
 
-The JPEG XL binding loads `jxl.dll` (or upstream's `jxl.dll` + `jxl_threads.dll` + `jxl_cms.dll`) **only when a JPEG XL is decoded or encoded**.  Without it every other format works, and a JPEG XL fails with a load error in `LastError`.  `D:\gllLibJxl\delphi\CopyJxlDlls.ps1 -Platform Win64 -OutputDir <exe folder>` copies the right DLLs and checks them; the tests and the demo run it as a post-build step.
+The JPEG XL binding loads `jxl.dll` (or upstream's `jxl.dll` + `jxl_threads.dll` + `jxl_cms.dll`) **only when a JPEG XL is decoded or encoded**.  Without it every other format works, and a JPEG XL fails with a load error in `LastError`.  libjxl-delphi's `CopyJxlDlls.ps1 -Platform Win64 -OutputDir <exe folder>` copies the right DLLs and checks them; the tests and the demo run it as a post-build step.
 
 ## 4. Things that look wrong and are not
 
@@ -42,4 +43,4 @@ The JPEG XL binding loads `jxl.dll` (or upstream's `jxl.dll` + `jxl_threads.dll`
 
 ## 5. Tests
 
-`Tests\gllImageTests` (DUnitX, Win64 Release console, `FailsOnNoAsserts`): the loader registry, the viewer (load, read-only, flips and rotation keeping their format, pan limits centred / uncentred / rotated / fitted, zoom from fit, `Stretch` / `Proportional`, a real `WM_DROPFILES`, `.jxl` saving), the data link (load from the field, edit / modify / Post, read-only, the old header, byte-exact `LoadFromFile`, a JPEG XL round trip, the `TGDBImage` alias) and format detection.  The JPEG XL tests need `jxl.dll` beside the runner (the post-build step copies it).  Every behaviour fix is mutation-checked (`test_mutate`).
+`Tests\gllImageTests` (DUnitX, Win64 Release console, `FailsOnNoAsserts`): the loader registry, the viewer (load, read-only, flips and rotation keeping their format, pan limits centred / uncentred / rotated / fitted, zoom from fit, `Stretch` / `Proportional`, a real `WM_DROPFILES`, `.jxl` saving), the data link (load from the field, edit / modify / Post, read-only, the old header, byte-exact `LoadFromFile`, a JPEG XL round trip, the `TGDBImage` alias) and format detection.  The JPEG XL tests need `jxl.dll` beside the runner (the post-build step copies it).  Every behaviour fix is mutation-checked: the fix was reverted and the suite shown to fail.
