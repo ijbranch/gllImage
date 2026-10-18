@@ -12,6 +12,7 @@ Both descend from `TgllCustomImageView`, so they behave identically:
 | **Formats** | JPEG, PNG, BMP, GIF (animated), ICO, WMF, EMF, TIFF (Windows WIC) and **JPEG XL** (libjxl, through [libjxl-delphi](https://github.com/ijbranch/libjxl-delphi)); anything else registered with `TPicture` is tried too. |
 | **Viewing** | Fit to window, shrink / zoom to fit, zoom (buttons, keys, Ctrl+wheel), pan by dragging, **scroll bars**, display rotation and flip, checkerboard behind transparency, error state. |
 | **Changing** | Rotate and flip the picture itself **keeping its format** (a JPEG XL stays JPEG XL), clipboard, load and save (`.jxl` included), print, thumbnails. |
+| **Drag and drop** | Drop files from Explorer **and virtual files** (an e-mail attachment, an image from a web browser); drag the picture out as a file (`EnableDragOut`), in its own format. |
 | **Data** | `TgllDBImage` stores the bytes of a loaded file exactly as they are, loads asynchronously on request, skips the header old `TDBImage` controls wrote, and works in a `TDBCtrlGrid`. |
 
 **Delphi 13, Win32 and Win64, VCL.**  The only dependency outside the RTL and VCL is LibJxl, for JPEG XL.

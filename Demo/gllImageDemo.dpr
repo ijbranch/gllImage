@@ -15,6 +15,7 @@ uses
   Vcl.Forms,
   gllImage.Consts in '..\Source\gllImage.Consts.pas',
   gllImage.Utils in '..\Source\gllImage.Utils.pas',
+  gllImage.DragDrop in '..\Source\gllImage.DragDrop.pas',
   gllImage.View in '..\Source\gllImage.View.pas',
   gllImage.DB in '..\Source\gllImage.DB.pas',
   Demo.Main in 'Demo.Main.pas' {DemoMainForm};

@@ -349,6 +349,23 @@ function IsSupportedExtension( const Extension : string ) : Boolean;
 function GetSupportedExtensions : TArray<string>;
 
 /// <summary>
+///   The file extension for a graphic class: what a file of its format is called.
+/// </summary>
+/// <remarks>TWICImage is taken to be TIFF (the format DetectImageFormat gives it); use GraphicFileExtension when
+/// the graphic itself is to hand.</remarks>
+/// <param name="AClass">The graphic class.</param>
+/// <returns>The extension with its dot, e.g. '.jxl'; '.bmp' for an unknown TBitmap descendant, and the extension
+/// registered with TPicture (or '.img') for any other class.</returns>
+function GraphicClassExtension( AClass : TGraphicClass ) : string;
+
+/// <summary>
+///   The file extension for a graphic: what a file written by its SaveToFile is called.
+/// </summary>
+/// <param name="AGraphic">The graphic.</param>
+/// <returns>The extension with its dot; it follows a TWICImage's ImageFormat and a TMetafile's Enhanced.</returns>
+function GraphicFileExtension( AGraphic : TGraphic ) : string;
+
+/// <summary>
 ///   Converts a graphic to a bitmap for manipulation.
 /// </summary>
 /// <param name="Source">The source graphic.</param>
@@ -476,6 +493,60 @@ function GetSupportedExtensions : TArray<string>;
 begin
 
   Result := GSupportedExtensions.Keys.ToArray;
+
+end;
+
+function GraphicClassExtension( AClass : TGraphicClass ) : string;
+begin
+
+  // TJxlImage descends from TBitmap, so it is tested first.
+  if ( AClass = nil ) then
+    Result := '.img'
+  else if AClass.InheritsFrom( TJxlImage ) then
+    Result := '.jxl'
+  else if AClass.InheritsFrom( TJPEGImage ) then
+    Result := '.jpg'
+  else if AClass.InheritsFrom( TPngImage ) then
+    Result := '.png'
+  else if AClass.InheritsFrom( TGIFImage ) then
+    Result := '.gif'
+  else if AClass.InheritsFrom( TWICImage ) then
+    Result := '.tif'
+  else if AClass.InheritsFrom( TMetafile ) then
+    Result := '.emf'
+  else if AClass.InheritsFrom( TIcon ) then
+    Result := '.ico'
+  else if AClass.InheritsFrom( TBitmap ) then
+    Result := '.bmp'
+  else
+  begin
+    Result := GraphicExtension( AClass );
+
+    Result := if Result = '' then '.img' else '.' + Result;
+  end;
+
+end;
+
+function GraphicFileExtension( AGraphic : TGraphic ) : string;
+begin
+
+  if ( AGraphic = nil ) then
+    Exit( '.img' );
+
+  if AGraphic is TWICImage then
+    case TWICImage( AGraphic ).ImageFormat of
+      wifBmp     : Result := '.bmp';
+      wifPng     : Result := '.png';
+      wifJpeg    : Result := '.jpg';
+      wifGif     : Result := '.gif';
+      wifWMPhoto : Result := '.wdp';
+    else
+      Result := '.tif';
+    end
+  else if ( AGraphic is TMetafile ) and ( not TMetafile( AGraphic ).Enhanced ) then
+    Result := '.wmf'
+  else
+    Result := GraphicClassExtension( TGraphicClass( AGraphic.ClassType ) );
 
 end;
 

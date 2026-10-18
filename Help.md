@@ -13,6 +13,7 @@ Building, deploying, and the things that look wrong and are not.  For how to use
 | `Source\gllImage.View.pas` | `TgllCustomImageView` (all the viewing) and `TgllImageView` |
 | `Source\gllImage.DB.pas` | `TgllDBImage`: the data link on top of the viewer |
 | `Source\gllImage.Utils.pas` | Format detection, loading, rotate / flip / thumbnail / print, the loader registry |
+| `Source\gllImage.DragDrop.pas` | OLE drag and drop: the drop target (real and virtual files), the drop source and the drag-out helpers |
 | `Source\gllImage.Consts.pas` | Resource strings and constants |
 | `Source\gllImage.Register.pas` + `.dcr` | Palette registration and icons (design-time only) |
 | `Packages\gllImageR` / `gllImageD` | Runtime and design-time packages; `gllImage.groupproj` builds both, the tests and the demo |
@@ -39,8 +40,11 @@ The JPEG XL binding loads `jxl.dll` (or upstream's `jxl.dll` + `jxl_threads.dll`
 - **`ZoomFactor` changes when you zoom a fitted picture.**  Zooming leaves fit mode at the scale shown, so the next step starts from what is on screen.
 - **Setting `Picture` on a `TgllDBImage` marks the record modified.**  That is how a change reaches the field.  For a display-only turn (an EXIF orientation, say) set `Rotation`, never rotate `Picture`.
 - **`LoadFromFile` on `TgllDBImage` leaves the record in edit.**  The field holds the file's bytes; **Post** stores them.  It no longer re-encodes them on Post (it did until 2026-10-19).
+- **A dropped virtual file has a temporary name.**  An e-mail attachment or an image from a browser exists only in the program it came from, so the control writes it to `%TEMP%\gllImage\{GUID}\` for the length of the drop and deletes it afterwards.  An `OnFilesDropped` handler that keeps a file must copy it.
+- **A dragged-out picture's file stays in `%TEMP%\gllImage` until the next drag-out or the control is freed.**  A drop target (Explorer among them) may copy it after the drag has ended, on a thread of its own.
+- **Only one OLE drop target per window.**  With `EnableDragDrop` on, the control registers its own; a form that puts another drop-target component on the control (gllDragAndDrop's `TDropFileTarget` / `TDropComboTarget`, say) must set `EnableDragDrop := False`, or whichever registers first wins.  In the designer the control registers none.
 - **TIFF without GraphicEx.**  The optional GraphicEx support was removed; TIFF decodes through the VCL's `TWICImage` (Windows Imaging Component).
 
 ## 5. Tests
 
-`Tests\gllImageTests` (DUnitX, Win64 Release console, `FailsOnNoAsserts`): the loader registry, the viewer (load, read-only, flips and rotation keeping their format, pan limits centred / uncentred / rotated / fitted, zoom from fit, `Stretch` / `Proportional`, a real `WM_DROPFILES`, `.jxl` saving), the data link (load from the field, edit / modify / Post, read-only, the old header, byte-exact `LoadFromFile`, a JPEG XL round trip, the `TGDBImage` alias) and format detection.  The JPEG XL tests need `jxl.dll` beside the runner (the post-build step copies it).  Every behaviour fix is mutation-checked: the fix was reverted and the suite shown to fail.
+`Tests\gllImageTests` (DUnitX, Win64 Release console, `FailsOnNoAsserts`): the loader registry, the viewer (load, read-only, flips and rotation keeping their format, pan limits centred / uncentred / rotated / fitted, zoom from fit, `Stretch` / `Proportional`, a real `WM_DROPFILES`, the drop rules and drag-out file, `.jxl` saving), OLE drag and drop (the shell's data object for a real file, virtual files from an HGLOBAL and a stream with safe unique names, the drop target refusing or handing over a file that exists only during the drop, safe file names), the data link (load from the field, edit / modify / Post, read-only, the old header, byte-exact `LoadFromFile`, a JPEG XL round trip, the `TGDBImage` alias, drag-out of the field's bytes and of an unposted flip) and format detection.  The JPEG XL tests need `jxl.dll` beside the runner (the post-build step copies it).  Every behaviour fix is mutation-checked: the fix was reverted and the suite shown to fail.

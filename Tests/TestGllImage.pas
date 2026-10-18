@@ -15,7 +15,7 @@ interface
 uses
   System.Classes, System.SysUtils,
   Data.DB, Datasnap.DBClient,
-  Winapi.Windows, Winapi.Messages, Winapi.ShlObj,
+  Winapi.Windows, Winapi.Messages, Winapi.ShlObj, Winapi.ActiveX,
   Vcl.Graphics, Vcl.Imaging.Jpeg, Vcl.Forms,
   DUnitX.TestFramework,
   Jxl.Api.Types, Jxl.Graphic,
@@ -28,6 +28,16 @@ type
     /// <summary>Calls the protected GetPlaceholderCaption.</summary>
     /// <returns>The caption the viewer draws before a picture loads.</returns>
     function PlaceholderCaption : string;
+    /// <summary>Calls the protected CanAcceptDrop.</summary>
+    /// <returns>True when a drop would be taken now.</returns>
+    function AcceptsDrop : Boolean;
+    /// <summary>Calls the protected HandleDroppedFiles, as an OLE drop does.</summary>
+    /// <param name="AFileNames">The dropped files.</param>
+    procedure Dropped( const AFileNames : TArray<string> );
+    /// <summary>Calls the protected SaveDragOutFile.</summary>
+    /// <param name="AFolder">An existing folder.</param>
+    /// <returns>The file written for a drag-out.</returns>
+    function DragOutTo( const AFolder : string ) : string;
   end;
 
   /// <summary>Exposes the protected hooks of TgllDBImage to the tests.</summary>
@@ -36,6 +46,10 @@ type
     /// <summary>Calls the protected GetPlaceholderCaption.</summary>
     /// <returns>The caption the control draws before a picture loads.</returns>
     function PlaceholderCaption : string;
+    /// <summary>Calls the protected SaveDragOutFile.</summary>
+    /// <param name="AFolder">An existing folder.</param>
+    /// <returns>The file written for a drag-out.</returns>
+    function DragOutTo( const AFolder : string ) : string;
   end;
 
   /// <summary>Tests of TgllImageFormatRegistry.</summary>
@@ -115,6 +129,43 @@ type
     /// <summary>Proves a dropped file list reaches OnFilesDropped in full, and that Handled stops the control loading
     ///   the first file itself.</summary>
     [Test] procedure DropFiles_ReachesHandler;
+    /// <summary>Proves a drop is refused while the viewer is read-only or EnableDragDrop is off, and taken otherwise:
+    ///   the OLE target asks CanAcceptDrop on every drag movement.</summary>
+    [Test] procedure CanAcceptDrop_FollowsReadOnlyAndEnable;
+    /// <summary>Proves an OLE drop with no OnFilesDropped handler loads the first file, as WM_DROPFILES does.</summary>
+    [Test] procedure DroppedFiles_NoHandler_LoadsFirst;
+    /// <summary>Proves a dragged-out PNG is written as a PNG under DragOutFileName, the extension given replaced by
+    ///   the picture's own.</summary>
+    [Test] procedure DragOut_Png_KeepsFormatUnderGivenName;
+  end;
+
+  /// <summary>Tests of the OLE pieces in gllImage.DragDrop.</summary>
+  [TestFixture]
+  TTestDragDrop = class
+  private
+    /// <summary>True when Setup's OleInitialize succeeded, so TearDown balances it.</summary>
+    FOle : Boolean;
+    /// <summary>A folder for the test's files; deleted in TearDown.</summary>
+    FFolder : string;
+  public
+    /// <summary>Initialises OLE and names the test folder.</summary>
+    [Setup] procedure Setup;
+    /// <summary>Deletes the test folder and uninitialises OLE.</summary>
+    [TearDown] procedure TearDown;
+    /// <summary>Proves the shell's own data object for a file (what Explorer drags) yields that file by name, with
+    ///   nothing written to the temporary folder.</summary>
+    [Test] procedure ShellFile_IsReturnedByName;
+    /// <summary>Proves virtual files (FileGroupDescriptorW) are written from an HGLOBAL (cut to the descriptor's size,
+    ///   not the block's) and from a stream, under safe and unique names, with a folder entry skipped.</summary>
+    [Test] procedure VirtualFiles_AreWrittenWithSafeUniqueNames;
+    /// <summary>Proves a target whose host refuses reports no effect on enter and drop, and hands nothing over.</summary>
+    [Test] procedure Target_Refused_HasNoEffect;
+    /// <summary>Proves a drop of a virtual file hands over a file that exists during the call and is deleted after
+    ///   it, and reports a copy.</summary>
+    [Test] procedure Target_VirtualFile_ExistsOnlyDuringDrop;
+    /// <summary>Proves offered names are made safe: path dropped, forbidden characters replaced, device names
+    ///   prefixed, an empty result named.</summary>
+    [Test] procedure SafeDropFileName_MakesNamesSafe;
   end;
 
   /// <summary>Tests of the format routines in gllImage.Utils.</summary>
@@ -165,14 +216,19 @@ type
     [Test] procedure Jxl_ShowsAndRotatesAsJxl;
     /// <summary>Proves a form that still names the old GITLAKDB class TGDBImage streams in as TgllDBImage.</summary>
     [Test] procedure OldClassName_IsAliased;
+    /// <summary>Proves a drag-out writes the field's own bytes, named for the format they hold.</summary>
+    [Test] procedure DragOut_WritesFieldBytes;
+    /// <summary>Proves a flip not yet posted is in the dragged-out file: it is written to the field first, as Post
+    ///   would write it.</summary>
+    [Test] procedure DragOut_UnpostedFlip_IsIncluded;
   end;
 
 implementation
 
 uses
-  System.IOUtils,
+  System.IOUtils, System.Types,
   Vcl.Imaging.PngImage,
-  gllImage.Consts,
+  gllImage.Consts, gllImage.DragDrop,
   MidasLib;
 
 type
@@ -346,6 +402,258 @@ begin
 
 end;
 
+type
+  /// <summary>One virtual file offered by TVirtualFiles.</summary>
+  TVirtualItem = record
+    /// <summary>The name offered, possibly with a path.</summary>
+    Name : string;
+    /// <summary>The contents.</summary>
+    Bytes : TBytes;
+    /// <summary>True for a folder entry, which has no contents.</summary>
+    IsFolder : Boolean;
+    /// <summary>True to hand the contents over as a stream rather than an HGLOBAL.</summary>
+    AsStream : Boolean;
+  end;
+
+  /// <summary>A data object offering virtual files only (FileGroupDescriptorW with FileContents), as Outlook or a
+  ///   web browser does.</summary>
+  TVirtualFiles = class( TInterfacedObject, IDataObject )
+  private
+    /// <summary>The files offered.</summary>
+    FItems : TArray<TVirtualItem>;
+    /// <summary>Clipboard format FileGroupDescriptorW.</summary>
+    FDescFormat : TClipFormat;
+    /// <summary>Clipboard format FileContents.</summary>
+    FContentsFormat : TClipFormat;
+  public
+    /// <summary>Creates the data object.</summary>
+    /// <param name="AItems">The files offered.</param>
+    constructor Create( const AItems : TArray<TVirtualItem> );
+    /// <summary>Returns the descriptor, or one file's contents.</summary>
+    /// <param name="formatetcIn">The format asked for.</param>
+    /// <param name="medium">Receives the data; the caller releases it.</param>
+    /// <returns>S_OK, or DV_E_FORMATETC for anything else.</returns>
+    function GetData( const formatetcIn : TFormatEtc; out medium : TStgMedium ) : HResult; stdcall;
+    /// <summary>Not supported.</summary>
+    /// <param name="formatetc">Ignored.</param>
+    /// <param name="medium">Ignored.</param>
+    /// <returns>E_NOTIMPL.</returns>
+    function GetDataHere( const formatetc : TFormatEtc; out medium : TStgMedium ) : HResult; stdcall;
+    /// <summary>Answers for the descriptor only.</summary>
+    /// <param name="formatetc">The format asked about.</param>
+    /// <returns>S_OK for FileGroupDescriptorW in an HGLOBAL, DV_E_FORMATETC otherwise.</returns>
+    function QueryGetData( const formatetc : TFormatEtc ) : HResult; stdcall;
+    /// <summary>Not supported.</summary>
+    /// <param name="formatetc">Ignored.</param>
+    /// <param name="formatetcOut">A copy of formatetc with its ptd cleared.</param>
+    /// <returns>E_NOTIMPL.</returns>
+    function GetCanonicalFormatEtc( const formatetc : TFormatEtc; out formatetcOut : TFormatEtc ) : HResult; stdcall;
+    /// <summary>Not supported.</summary>
+    /// <param name="formatetc">Ignored.</param>
+    /// <param name="medium">Ignored.</param>
+    /// <param name="fRelease">Ignored.</param>
+    /// <returns>E_NOTIMPL.</returns>
+    function SetData( const formatetc : TFormatEtc; var medium : TStgMedium; fRelease : BOOL ) : HResult; stdcall;
+    /// <summary>Not supported.</summary>
+    /// <param name="dwDirection">Ignored.</param>
+    /// <param name="enumFormatEtc">Set to nil.</param>
+    /// <returns>E_NOTIMPL.</returns>
+    function EnumFormatEtc( dwDirection : Longint; out enumFormatEtc : IEnumFormatEtc ) : HResult; stdcall;
+    /// <summary>Not supported.</summary>
+    /// <param name="formatetc">Ignored.</param>
+    /// <param name="advf">Ignored.</param>
+    /// <param name="advSink">Ignored.</param>
+    /// <param name="dwConnection">Set to 0.</param>
+    /// <returns>OLE_E_ADVISENOTSUPPORTED.</returns>
+    function DAdvise( const formatetc : TFormatEtc; advf : Longint; const advSink : IAdviseSink;
+                      out dwConnection : Longint ) : HResult; stdcall;
+    /// <summary>Not supported.</summary>
+    /// <param name="dwConnection">Ignored.</param>
+    /// <returns>OLE_E_ADVISENOTSUPPORTED.</returns>
+    function DUnadvise( dwConnection : Longint ) : HResult; stdcall;
+    /// <summary>Not supported.</summary>
+    /// <param name="enumAdvise">Set to nil.</param>
+    /// <returns>OLE_E_ADVISENOTSUPPORTED.</returns>
+    function EnumDAdvise( out enumAdvise : IEnumStatData ) : HResult; stdcall;
+  end;
+
+/// <summary>Makes a virtual-file item.</summary>
+/// <param name="AName">The name offered.</param>
+/// <param name="ABytes">The contents.</param>
+/// <param name="AAsStream">True to hand the contents over as a stream.</param>
+/// <param name="AIsFolder">True for a folder entry.</param>
+/// <returns>The item.</returns>
+function VirtualItem( const AName : string; const ABytes : TBytes; AAsStream : Boolean = False;
+                      AIsFolder : Boolean = False ) : TVirtualItem;
+begin
+
+  Result.Name     := AName;
+  Result.Bytes    := ABytes;
+  Result.AsStream := AAsStream;
+  Result.IsFolder := AIsFolder;
+
+end;
+
+/// <summary>Writes the red / blue bitmap as a PNG file.</summary>
+/// <param name="AFileName">The file to write.</param>
+procedure WriteRedBluePng( const AFileName : string );
+begin
+
+  var lBmp := NewRedBlueBitmap;
+  var lPng := TPngImage.Create;
+
+  try
+    lPng.Assign( lBmp );
+    lPng.SaveToFile( AFileName );
+  finally
+    lPng.Free;
+    lBmp.Free;
+  end;
+
+end;
+
+{ TVirtualFiles }
+
+constructor TVirtualFiles.Create( const AItems : TArray<TVirtualItem> );
+begin
+
+  inherited Create;
+
+  FItems          := AItems;
+  FDescFormat     := RegisterClipboardFormat( CFSTR_FILEDESCRIPTORW );
+  FContentsFormat := RegisterClipboardFormat( CFSTR_FILECONTENTS );
+
+end;
+
+function TVirtualFiles.GetData( const formatetcIn : TFormatEtc; out medium : TStgMedium ) : HResult;
+begin
+
+  medium := Default( TStgMedium );
+  Result := DV_E_FORMATETC;
+
+  if ( formatetcIn.cfFormat = FDescFormat ) and ( ( formatetcIn.tymed and TYMED_HGLOBAL ) <> 0 ) then
+  begin
+    var lSize := SizeOf( TFileGroupDescriptorW ) + ( Length( FItems ) - 1 ) * SizeOf( TFileDescriptorW );
+    var lMem  := GlobalAlloc( GHND, lSize );
+    var lGrp  := PFileGroupDescriptorW( GlobalLock( lMem ) );
+
+    lGrp.cItems := Length( FItems );
+
+    for var i := 0 to High( FItems ) do
+    begin
+      var lDesc := PFileDescriptorW( PByte( @lGrp.fgd[ 0 ] ) + i * SizeOf( TFileDescriptorW ) );
+
+      lDesc.dwFlags := FD_ATTRIBUTES or FD_FILESIZE;
+
+      if FItems[ i ].IsFolder then
+        lDesc.dwFileAttributes := FILE_ATTRIBUTE_DIRECTORY
+      else
+        lDesc.dwFileAttributes := FILE_ATTRIBUTE_NORMAL;
+
+      lDesc.nFileSizeLow := Length( FItems[ i ].Bytes );
+      StrPLCopy( lDesc.cFileName, FItems[ i ].Name, MAX_PATH - 1 );
+    end;
+
+    GlobalUnlock( lMem );
+    medium.tymed   := TYMED_HGLOBAL;
+    medium.hGlobal := lMem;
+    Result         := S_OK;
+  end
+  else if ( formatetcIn.cfFormat = FContentsFormat ) and ( formatetcIn.lindex >= 0 ) and
+          ( formatetcIn.lindex <= High( FItems ) ) and ( not FItems[ formatetcIn.lindex ].IsFolder ) then
+  begin
+    var lItem := FItems[ formatetcIn.lindex ];
+
+    if lItem.AsStream then
+    begin
+      var lStream : IStream := TStreamAdapter.Create( TBytesStream.Create( lItem.Bytes ), soOwned );
+
+      lStream._AddRef;   // released by ReleaseStgMedium
+      medium.tymed := TYMED_ISTREAM;
+      medium.stm   := Pointer( lStream );
+    end
+    else
+    begin
+      // A block bigger than the file, as GlobalAlloc may give: the descriptor's size must win.
+      var lMem := GlobalAlloc( GHND, Length( lItem.Bytes ) + 16 );
+
+      Move( lItem.Bytes[ 0 ], GlobalLock( lMem )^, Length( lItem.Bytes ) );
+      GlobalUnlock( lMem );
+      medium.tymed   := TYMED_HGLOBAL;
+      medium.hGlobal := lMem;
+    end;
+
+    Result := S_OK;
+  end;
+
+end;
+
+function TVirtualFiles.GetDataHere( const formatetc : TFormatEtc; out medium : TStgMedium ) : HResult;
+begin
+
+  medium := Default( TStgMedium );
+  Result := E_NOTIMPL;
+
+end;
+
+function TVirtualFiles.QueryGetData( const formatetc : TFormatEtc ) : HResult;
+begin
+
+  if ( formatetc.cfFormat = FDescFormat ) and ( ( formatetc.tymed and TYMED_HGLOBAL ) <> 0 ) then
+    Result := S_OK
+  else
+    Result := DV_E_FORMATETC;
+
+end;
+
+function TVirtualFiles.GetCanonicalFormatEtc( const formatetc : TFormatEtc; out formatetcOut : TFormatEtc ) : HResult;
+begin
+
+  formatetcOut     := formatetc;
+  formatetcOut.ptd := nil;
+  Result           := E_NOTIMPL;
+
+end;
+
+function TVirtualFiles.SetData( const formatetc : TFormatEtc; var medium : TStgMedium; fRelease : BOOL ) : HResult;
+begin
+
+  Result := E_NOTIMPL;
+
+end;
+
+function TVirtualFiles.EnumFormatEtc( dwDirection : Longint; out enumFormatEtc : IEnumFormatEtc ) : HResult;
+begin
+
+  enumFormatEtc := nil;
+  Result        := E_NOTIMPL;
+
+end;
+
+function TVirtualFiles.DAdvise( const formatetc : TFormatEtc; advf : Longint; const advSink : IAdviseSink;
+                                out dwConnection : Longint ) : HResult;
+begin
+
+  dwConnection := 0;
+  Result       := OLE_E_ADVISENOTSUPPORTED;
+
+end;
+
+function TVirtualFiles.DUnadvise( dwConnection : Longint ) : HResult;
+begin
+
+  Result := OLE_E_ADVISENOTSUPPORTED;
+
+end;
+
+function TVirtualFiles.EnumDAdvise( out enumAdvise : IEnumStatData ) : HResult;
+begin
+
+  enumAdvise := nil;
+  Result     := OLE_E_ADVISENOTSUPPORTED;
+
+end;
+
 { TViewProbe }
 
 function TViewProbe.PlaceholderCaption : string;
@@ -355,12 +663,40 @@ begin
 
 end;
 
+function TViewProbe.AcceptsDrop : Boolean;
+begin
+
+  Result := CanAcceptDrop;
+
+end;
+
+procedure TViewProbe.Dropped( const AFileNames : TArray<string> );
+begin
+
+  HandleDroppedFiles( AFileNames );
+
+end;
+
+function TViewProbe.DragOutTo( const AFolder : string ) : string;
+begin
+
+  Result := SaveDragOutFile( AFolder );
+
+end;
+
 { TDBImageProbe }
 
 function TDBImageProbe.PlaceholderCaption : string;
 begin
 
   Result := GetPlaceholderCaption;
+
+end;
+
+function TDBImageProbe.DragOutTo( const AFolder : string ) : string;
+begin
+
+  Result := SaveDragOutFile( AFolder );
 
 end;
 
@@ -766,6 +1102,72 @@ begin
 
 end;
 
+procedure TTestImageView.CanAcceptDrop_FollowsReadOnlyAndEnable;
+begin
+
+  Assert.IsTrue( FView.AcceptsDrop, 'A writable viewer takes a drop' );
+
+  FView.ReadOnly := True;
+  Assert.IsFalse( FView.AcceptsDrop, 'A read-only viewer refuses it' );
+
+  FView.ReadOnly       := False;
+  FView.EnableDragDrop := False;
+  Assert.IsFalse( FView.AcceptsDrop, 'EnableDragDrop off refuses it' );
+
+end;
+
+procedure TTestImageView.DroppedFiles_NoHandler_LoadsFirst;
+begin
+
+  var lFile := TPath.Combine( TPath.GetTempPath, 'gllImageTest-' + TGUID.NewGuid.ToString + '.png' );
+
+  try
+    WriteRedBluePng( lFile );
+    FView.Dropped( [ lFile, 'C:\not-there.png' ] );
+
+    Assert.AreEqual( 0, FErrors, 'Only the first file is loaded' );
+    Assert.IsTrue( FView.HasImage, 'The dropped PNG must be shown' );
+    Assert.AreEqual( 'PNG', FView.ImageFormat );
+  finally
+    TFile.Delete( lFile );
+  end;
+
+end;
+
+procedure TTestImageView.DragOut_Png_KeepsFormatUnderGivenName;
+begin
+
+  var lFolder := NewDropFolder;
+  var lBmp    := NewRedBlueBitmap;
+  var lPng    := TPngImage.Create;
+
+  try
+    ForceDirectories( lFolder );
+    lPng.Assign( lBmp );
+    FView.Picture.Assign( lPng );
+    FView.DragOutFileName := 'Job 12.jpg';
+
+    var lFile := FView.DragOutTo( lFolder );
+
+    Assert.AreEqual( 'Job 12.png', ExtractFileName( lFile ), 'The given extension gives way to the picture''s own' );
+
+    var lBack := TPngImage.Create;
+
+    try
+      lBack.LoadFromFile( lFile );
+      Assert.AreEqual( Integer( clRed ), Integer( PixelOf( lBack, 0 ) ) );
+      Assert.AreEqual( Integer( clBlue ), Integer( PixelOf( lBack, 1 ) ) );
+    finally
+      lBack.Free;
+    end;
+  finally
+    lPng.Free;
+    lBmp.Free;
+    DeleteDropFolder( lFolder );
+  end;
+
+end;
+
 procedure TTestImageView.SaveToFile_Jxl_WritesJpegXl;
 begin
 
@@ -1139,9 +1541,186 @@ begin
 
 end;
 
+procedure TTestDBImage.DragOut_WritesFieldBytes;
+begin
+
+  var lFolder := NewDropFolder;
+
+  try
+    ForceDirectories( lFolder );
+    FImage.DragOutFileName := 'Photo';
+
+    var lFile   := FImage.DragOutTo( lFolder );
+    var lStored := TMemoryStream.Create;
+
+    try
+      TBlobField( FData.FieldByName( 'Pic' ) ).SaveToStream( lStored );
+      Assert.AreEqual( 'Photo.bmp', ExtractFileName( lFile ) );
+      Assert.AreEqual<Byte>( StreamBytes( lStored ), TFile.ReadAllBytes( lFile ), 'The file must be the field''s bytes' );
+    finally
+      lStored.Free;
+    end;
+  finally
+    DeleteDropFolder( lFolder );
+  end;
+
+end;
+
+procedure TTestDBImage.DragOut_UnpostedFlip_IsIncluded;
+begin
+
+  var lFolder := NewDropFolder;
+
+  try
+    ForceDirectories( lFolder );
+    FImage.FlipHorizontal;
+    Assert.AreEqual( dsEdit, FData.State, 'The flip is not posted yet' );
+
+    var lBack := TBitmap.Create;
+
+    try
+      lBack.LoadFromFile( FImage.DragOutTo( lFolder ) );
+      Assert.AreEqual( Integer( clBlue ), Integer( PixelOf( lBack, 0 ) ), 'The dragged file must be the flipped picture' );
+    finally
+      lBack.Free;
+    end;
+  finally
+    DeleteDropFolder( lFolder );
+  end;
+
+end;
+
+{ TTestDragDrop }
+
+procedure TTestDragDrop.Setup;
+begin
+
+  FOle    := Succeeded( OleInitialize( nil ) );
+  FFolder := NewDropFolder;
+
+end;
+
+procedure TTestDragDrop.TearDown;
+begin
+
+  DeleteDropFolder( FFolder );
+
+  if FOle then
+    OleUninitialize;
+
+end;
+
+procedure TTestDragDrop.ShellFile_IsReturnedByName;
+begin
+
+  var lFile := TPath.Combine( TPath.GetTempPath, 'gllImageTest-' + TGUID.NewGuid.ToString + '.png' );
+
+  try
+    WriteRedBluePng( lFile );
+
+    var lData := CreateFileDataObject( lFile );
+
+    Assert.IsNotNull( lData, 'The shell must provide a data object for an existing file' );
+    Assert.IsTrue( HasDroppableFiles( lData ) );
+
+    var lFiles := ExtractDroppedFiles( lData, FFolder );
+
+    Assert.AreEqual( 1, Length( lFiles ) );
+    Assert.IsTrue( SameText( lFile, lFiles[ 0 ] ), 'The real file is returned by name: ' + lFiles[ 0 ] );
+    Assert.IsFalse( TDirectory.Exists( FFolder ), 'Nothing is written for a real file' );
+  finally
+    TFile.Delete( lFile );
+  end;
+
+end;
+
+procedure TTestDragDrop.VirtualFiles_AreWrittenWithSafeUniqueNames;
+begin
+
+  var lFirst  := TEncoding.ASCII.GetBytes( 'first file' );
+  var lSecond := TEncoding.ASCII.GetBytes( 'second, from a stream' );
+  var lData   : IDataObject := TVirtualFiles.Create( [ VirtualItem( 'Album', nil, False, True ),
+                                                       VirtualItem( 'Album/photo:1.png', lFirst ),
+                                                       VirtualItem( 'photo:1.png', lSecond, True ) ] );
+
+  Assert.IsTrue( HasDroppableFiles( lData ) );
+
+  var lFiles := ExtractDroppedFiles( lData, FFolder );
+
+  Assert.AreEqual( 2, Length( lFiles ), 'The folder entry is skipped' );
+  Assert.AreEqual( 'photo_1.png', ExtractFileName( lFiles[ 0 ] ) );
+  Assert.AreEqual( 'photo_1 (2).png', ExtractFileName( lFiles[ 1 ] ), 'A second file of the same name is made unique' );
+  Assert.AreEqual<Byte>( lFirst, TFile.ReadAllBytes( lFiles[ 0 ] ), 'An HGLOBAL is cut to the descriptor''s size' );
+  Assert.AreEqual<Byte>( lSecond, TFile.ReadAllBytes( lFiles[ 1 ] ), 'A stream is read to its end' );
+
+end;
+
+procedure TTestDragDrop.Target_Refused_HasNoEffect;
+begin
+
+  var lCalled := False;
+  var lData   : IDataObject := TVirtualFiles.Create( [ VirtualItem( 'a.png', TEncoding.ASCII.GetBytes( 'x' ) ) ] );
+  var lTarget : IDropTarget := TgllImageDropTarget.Create( 0,
+                                 function : Boolean
+                                 begin
+                                   Result := False;
+                                 end,
+                                 procedure( const AFileNames : TArray<string> )
+                                 begin
+                                   lCalled := True;
+                                 end );
+  var lEffect : Longint := DROPEFFECT_COPY or DROPEFFECT_MOVE;
+
+  lTarget.DragEnter( lData, MK_LBUTTON, Point( 0, 0 ), lEffect );
+  Assert.AreEqual( DROPEFFECT_NONE, lEffect, 'A refusing host shows no effect' );
+
+  lEffect := DROPEFFECT_COPY;
+  lTarget.Drop( lData, 0, Point( 0, 0 ), lEffect );
+  Assert.AreEqual( DROPEFFECT_NONE, lEffect );
+  Assert.IsFalse( lCalled, 'Nothing is handed over' );
+
+end;
+
+procedure TTestDragDrop.Target_VirtualFile_ExistsOnlyDuringDrop;
+begin
+
+  var lNames  : TArray<string>;
+  var lExists := False;
+  var lData   : IDataObject := TVirtualFiles.Create( [ VirtualItem( 'a.png', TEncoding.ASCII.GetBytes( 'x' ) ) ] );
+  var lTarget : IDropTarget := TgllImageDropTarget.Create( 0, nil,
+                                 procedure( const AFileNames : TArray<string> )
+                                 begin
+                                   lNames  := AFileNames;
+                                   lExists := ( Length( AFileNames ) = 1 ) and FileExists( AFileNames[ 0 ] );
+                                 end );
+  var lEffect : Longint := DROPEFFECT_COPY or DROPEFFECT_MOVE;
+
+  lTarget.DragEnter( lData, MK_LBUTTON, Point( 0, 0 ), lEffect );
+  Assert.AreEqual( DROPEFFECT_COPY, lEffect, 'Only a copy is offered' );
+
+  lEffect := DROPEFFECT_COPY or DROPEFFECT_MOVE;
+  lTarget.Drop( lData, 0, Point( 0, 0 ), lEffect );
+
+  Assert.AreEqual( DROPEFFECT_COPY, lEffect );
+  Assert.IsTrue( lExists, 'The file exists while the drop is handled' );
+  Assert.IsFalse( FileExists( lNames[ 0 ] ), 'and is deleted after it' );
+
+end;
+
+procedure TTestDragDrop.SafeDropFileName_MakesNamesSafe;
+begin
+
+  Assert.AreEqual( 'c_d_.png', SafeDropFileName( 'a/b\c<d>.png' ) );
+  Assert.AreEqual( '_CON.txt', SafeDropFileName( 'CON.txt' ) );
+  Assert.AreEqual( 'photo', SafeDropFileName( 'photo. . ' ) );
+  Assert.AreEqual( 'Dropped', SafeDropFileName( '...' ) );
+
+end;
+
 initialization
 
   TDUnitX.RegisterTestFixture( TTestFormatRegistry );
+  TDUnitX.RegisterTestFixture( TTestDragDrop );
   TDUnitX.RegisterTestFixture( TTestImageView );
   TDUnitX.RegisterTestFixture( TTestDBImage );
   TDUnitX.RegisterTestFixture( TTestFormats );

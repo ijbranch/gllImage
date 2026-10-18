@@ -127,8 +127,8 @@
         <VerInfo_MajorVer>1</VerInfo_MajorVer>
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
-        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage tests;FileVersion=1.0.0.38;InternalName=gllImageTests;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=gllImageTests.exe;ProductName=gllImage;ProductVersion=1.0.0.38;Comments=</VerInfo_Keys>
-        <VerInfo_Build>38</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage tests;FileVersion=1.0.0.50;InternalName=gllImageTests;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=gllImageTests.exe;ProductName=gllImage;ProductVersion=1.0.0.50;Comments=</VerInfo_Keys>
+        <VerInfo_Build>50</VerInfo_Build>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
         <AppDPIAwarenessMode>unaware</AppDPIAwarenessMode>
@@ -146,6 +146,7 @@
         </DelphiCompile>
         <DCCReference Include="..\Source\gllImage.Consts.pas"/>
         <DCCReference Include="..\Source\gllImage.Utils.pas"/>
+        <DCCReference Include="..\Source\gllImage.DragDrop.pas"/>
         <DCCReference Include="..\Source\gllImage.View.pas"/>
         <DCCReference Include="..\Source\gllImage.DB.pas"/>
         <DCCReference Include="TestGllImage.pas"/>

@@ -21,6 +21,7 @@ uses
   DUnitX.TestFramework,
   gllImage.Consts in '..\Source\gllImage.Consts.pas',
   gllImage.Utils in '..\Source\gllImage.Utils.pas',
+  gllImage.DragDrop in '..\Source\gllImage.DragDrop.pas',
   gllImage.View in '..\Source\gllImage.View.pas',
   gllImage.DB in '..\Source\gllImage.DB.pas',
   TestGllImage in 'TestGllImage.pas';

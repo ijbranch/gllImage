@@ -35,7 +35,7 @@ unit gllImage.View;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, Winapi.ShellAPI,
+  Winapi.Windows, Winapi.Messages, Winapi.ShellAPI, Winapi.ActiveX,
   System.SysUtils, System.Classes, System.Types, System.UITypes, System.Math,
   System.Generics.Collections,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Menus, Vcl.Dialogs,
@@ -171,6 +171,22 @@ type
     FShowContextMenu    : Boolean;
     /// <summary>Raised when image files are dropped on the control.</summary>
     FOnFilesDropped     : TFilesDroppedEvent;
+    /// <summary>The OLE drop target registered for the window; nil while none is registered.</summary>
+    FDropTarget         : IDropTarget;
+    /// <summary>True once OleInitialize succeeded for this control, so Destroy balances it.</summary>
+    FOleInitialised     : Boolean;
+    /// <summary>When True the picture can be dragged out of the control as a file.</summary>
+    FEnableDragOut      : Boolean;
+    /// <summary>File name (without extension) of a picture dragged out; empty for the default.</summary>
+    FDragOutFileName    : string;
+    /// <summary>True between a left-button press that may start a drag-out and the move that starts it.</summary>
+    FDragOutPending     : Boolean;
+    /// <summary>Where the press that may start a drag-out was made.</summary>
+    FDragOutStart       : TPoint;
+    /// <summary>True while a drag-out runs, so the control does not take its own picture back.</summary>
+    FDraggingOut        : Boolean;
+    /// <summary>Temporary folder holding the file of the last drag-out; deleted at the next drag and in Destroy.</summary>
+    FDragOutFolder      : string;
     /// <summary>TDBImage-compatible Stretch, as last set (see SetStretch).</summary>
     FStretch            : Boolean;
     /// <summary>TDBImage-compatible Proportional, as last set (see SetStretch).</summary>
@@ -244,6 +260,18 @@ type
     /// <summary>Setter for CheckerColour2.</summary>
     /// <param name="Value">The new value.</param>
     procedure SetCheckerColour2( const Value : TColor );
+    /// <summary>Initialises OLE for this control once (balanced in Destroy).</summary>
+    /// <returns>True when OLE is usable on this thread.</returns>
+    function EnsureOle : Boolean;
+    /// <summary>Registers the window as an OLE drop target, or for WM_DROPFILES when OLE is not available.</summary>
+    procedure RegisterDropTarget;
+    /// <summary>Revokes whichever drop registration RegisterDropTarget made.</summary>
+    procedure RevokeDropTarget;
+    /// <summary>True when a left-button drag would drag the picture out now.</summary>
+    /// <returns>True when EnableDragOut is on and a loaded picture is shown, outside the designer.</returns>
+    function CanDragOut : Boolean;
+    /// <summary>Writes the picture to a new temporary folder (SaveDragOutFile) and drags that file out.</summary>
+    procedure BeginDragOut;
     /// <summary>Setter for EnableDragDrop; registers or revokes the window as a drop target.</summary>
     /// <param name="Value">The new value.</param>
     procedure SetEnableDragDrop( const Value : Boolean );
@@ -492,6 +520,26 @@ type
     /// PictureModified.</summary>
     /// <param name="Sender">The object that raised the event.</param>
     procedure PictureChanged( Sender : TObject );
+    /// <summary>Asks whether files dragged over the control would be taken now.</summary>
+    /// <returns>True when EnableDragDrop is on, the control is enabled and not read-only, and it is not dragging its
+    /// own picture out.</returns>
+    function CanAcceptDrop : Boolean; virtual;
+    /// <summary>Takes dropped files, from an OLE drop or WM_DROPFILES: OnFilesDropped sees them first; left
+    /// unhandled, the first one is loaded when its extension is supported, otherwise LastError and OnImageError
+    /// report it.</summary>
+    /// <remarks>The temporary copy of a virtual file (an e-mail attachment, an image from a browser) exists only for
+    /// the length of this call.</remarks>
+    /// <param name="AFileNames">The dropped files.</param>
+    procedure HandleDroppedFiles( const AFileNames : TArray<string> ); virtual;
+    /// <summary>Writes the picture to a file in AFolder for a drag-out.</summary>
+    /// <remarks>Here the picture's own SaveToFile, so it keeps its format; TgllDBImage writes the field's bytes.</remarks>
+    /// <param name="AFolder">An existing, empty temporary folder.</param>
+    /// <returns>The file written, or an empty string when there is nothing to drag.</returns>
+    function SaveDragOutFile( const AFolder : string ) : string; virtual;
+    /// <summary>The name, without extension, a dragged-out picture's file is given: DragOutFileName made safe, or
+    /// SDragOutDefaultName.</summary>
+    /// <returns>The file name without extension.</returns>
+    function DragOutBaseName : string;
 
   public
     /// <summary>Creates the component, initialising defaults, picture buffers, animation timer and save handlers.</summary>
@@ -829,6 +877,16 @@ type
     /// </summary>
     property EnableDragDrop : Boolean read FEnableDragDrop write SetEnableDragDrop default True;
     /// <summary>
+    ///   Lets the picture be dragged out of the control as a file (to Explorer, an e-mail, another program). The drag
+    ///   starts with the left button when the picture cannot be panned, or with Ctrl held when it can.
+    /// </summary>
+    property EnableDragOut : Boolean read FEnableDragOut write FEnableDragOut default False;
+    /// <summary>
+    ///   File name, without extension, of a picture dragged out; the extension follows the picture's format. Empty
+    ///   gives SDragOutDefaultName.
+    /// </summary>
+    property DragOutFileName : string read FDragOutFileName write FDragOutFileName;
+    /// <summary>
     ///   Shows an error indicator when image loading fails.
     /// </summary>
     property ShowErrorState : Boolean read FShowErrorState write FShowErrorState default True;
@@ -971,6 +1029,10 @@ type
     property MaxZoom;
     /// <summary>Inherited <c>EnableDragDrop</c>, published.</summary>
     property EnableDragDrop;
+    /// <summary>Inherited <c>EnableDragOut</c>, published.</summary>
+    property EnableDragOut;
+    /// <summary>Inherited <c>DragOutFileName</c>, published.</summary>
+    property DragOutFileName;
     /// <summary>Inherited <c>ShowErrorState</c>, published.</summary>
     property ShowErrorState;
     /// <summary>Inherited <c>MaxImageWidth</c>, published.</summary>
@@ -1048,8 +1110,10 @@ type
 implementation
 
 uses
+  System.IOUtils,
   Vcl.Clipbrd, Vcl.Imaging.Jpeg, Vcl.Imaging.PngImage,
-  Jxl.Graphic;
+  Jxl.Graphic,
+  gllImage.DragDrop;
 
 constructor TgllCustomImageView.Create( AOwner : TComponent );
 begin
@@ -1115,6 +1179,17 @@ end;
 
 destructor TgllCustomImageView.Destroy;
 begin
+
+  // GITLAK 2026-10-19: the OLE registration goes before OLE is uninitialised; DestroyWnd, later, finds none.
+  if HandleAllocated then
+    RevokeDropTarget;
+
+  FDropTarget := nil;
+
+  if FOleInitialised then
+    OleUninitialize;
+
+  DeleteDropFolder( FDragOutFolder );
 
   StopAnimation;
   FAnimationTimer.Free;
@@ -2086,7 +2161,7 @@ begin
   inherited CreateWnd;
 
   if FEnableDragDrop then
-    DragAcceptFiles( Handle, True );
+    RegisterDropTarget;
 
   UpdateScrollBars;
 
@@ -2095,10 +2170,58 @@ end;
 procedure TgllCustomImageView.DestroyWnd;
 begin
 
-  if FEnableDragDrop and HandleAllocated then
-    DragAcceptFiles( Handle, False );
+  if HandleAllocated then
+    RevokeDropTarget;
 
   inherited DestroyWnd;
+
+end;
+
+function TgllCustomImageView.EnsureOle : Boolean;
+begin
+
+  // S_FALSE (already initialised on this thread) also needs its OleUninitialize; RPC_E_CHANGED_MODE (the thread
+  // is multi-threaded COM) does not, and leaves only WM_DROPFILES.
+  if not FOleInitialised then
+    FOleInitialised := Succeeded( OleInitialize( nil ) );
+
+  Result := FOleInitialised;
+
+end;
+
+procedure TgllCustomImageView.RegisterDropTarget;
+begin
+
+  // GITLAK 2026-10-19: OLE first, so virtual files (e-mail attachments, images from a browser) can be dropped as
+  // well as files from Explorer. The designer keeps its own drag and drop.
+  if ( csDesigning in ComponentState ) or Assigned( FDropTarget ) then
+    Exit;
+
+  if EnsureOle then
+  begin
+    var lTarget : IDropTarget := TgllImageDropTarget.Create( Handle, CanAcceptDrop, HandleDroppedFiles );
+
+    if Succeeded( RegisterDragDrop( Handle, lTarget ) ) then
+    begin
+      FDropTarget := lTarget;
+      Exit;
+    end;
+  end;
+
+  DragAcceptFiles( Handle, True );
+
+end;
+
+procedure TgllCustomImageView.RevokeDropTarget;
+begin
+
+  if Assigned( FDropTarget ) then
+  begin
+    RevokeDragDrop( Handle );
+    FDropTarget := nil;
+  end
+  else
+    DragAcceptFiles( Handle, False );
 
 end;
 
@@ -2373,7 +2496,10 @@ begin
     FEnableDragDrop := Value;
 
     if HandleAllocated then
-      DragAcceptFiles( Handle, Value );
+      if Value then
+        RegisterDropTarget
+      else
+        RevokeDropTarget;
   end;
 
 end;
@@ -3105,7 +3231,15 @@ begin
   if TabStop and CanFocus then
     SetFocus;
 
-  if FEnablePan and HasImage then
+  // GITLAK 2026-10-19: a picture that cannot be panned is dragged out; one that can is dragged out with Ctrl.
+  var lPannable := FEnablePan and ( GetScrollExcess <> Point( 0, 0 ) );
+
+  if CanDragOut and ( ( ( Message.Keys and MK_CONTROL ) <> 0 ) or ( not lPannable ) ) then
+  begin
+    FDragOutPending := True;
+    FDragOutStart   := Point( Message.XPos, Message.YPos );
+  end
+  else if FEnablePan and HasImage then
     StartPan( Message.XPos, Message.YPos );
 
   inherited;
@@ -3115,6 +3249,7 @@ end;
 procedure TgllCustomImageView.WMLButtonUp( var Message : TWMLButtonUp );
 begin
 
+  FDragOutPending := False;
   EndPan;
   inherited;
 
@@ -3123,7 +3258,15 @@ end;
 procedure TgllCustomImageView.WMMouseMove( var Message : TWMMouseMove );
 begin
 
-  if FIsPanning then
+  if FDragOutPending then
+  begin
+    if ( Message.Keys and MK_LBUTTON ) = 0 then
+      FDragOutPending := False
+    else if ( Abs( Message.XPos - FDragOutStart.X ) > GetSystemMetrics( SM_CXDRAG ) ) or
+            ( Abs( Message.YPos - FDragOutStart.Y ) > GetSystemMetrics( SM_CYDRAG ) ) then
+      BeginDragOut;
+  end
+  else if FIsPanning then
     UpdatePan( Message.XPos, Message.YPos );
 
   inherited;
@@ -3173,60 +3316,150 @@ end;
 
 procedure TgllCustomImageView.WMDropFiles( var Message : TWMDropFiles );
 var
-  lFileCount : Integer;
-  lFileName  : array[ 0..MAX_PATH ] of Char;
+  lFileName : array[ 0..MAX_PATH ] of Char;
 begin
 
-  if ( not FEnableDragDrop ) or GetReadOnly then
+  if not CanAcceptDrop then
   begin
     inherited;
     Exit;
   end;
 
   try
-    lFileCount := DragQueryFile( Message.Drop, $FFFFFFFF, nil, 0 );
+    var lFileCount := DragQueryFile( Message.Drop, $FFFFFFFF, nil, 0 );
+    var lNames     : TArray<string>;
 
-    // GITLAK 2026-10-19: the host sees every dropped file first and may take the drop over.
-    if ( lFileCount > 0 ) and Assigned( FOnFilesDropped ) then
+    SetLength( lNames, lFileCount );
+
+    for var i := 0 to Integer( lFileCount ) - 1 do
     begin
-      var lNames   : TArray<string>;
-      var lHandled := False;
-
-      SetLength( lNames, lFileCount );
-
-      for var i := 0 to lFileCount - 1 do
-      begin
-        DragQueryFile( Message.Drop, i, lFileName, MAX_PATH );
-        lNames[ i ] := lFileName;
-      end;
-
-      FOnFilesDropped( Self, lNames, lHandled );
-
-      if lHandled then
-        lFileCount := 0;
+      DragQueryFile( Message.Drop, i, lFileName, MAX_PATH );
+      lNames[ i ] := lFileName;
     end;
 
-    if lFileCount > 0 then
-    begin
-      DragQueryFile( Message.Drop, 0, lFileName, MAX_PATH );
-
-      if IsSupportedExtension( ExtractFileExt( lFileName ) ) then
-        LoadFromFile( lFileName )
-      else
-      begin
-        FLastError := SUnsupportedFileFormat;
-
-        if Assigned( FOnImageError ) then
-          FOnImageError( Self );
-
-        Invalidate;
-      end;
-    end;
+    HandleDroppedFiles( lNames );
   finally
     DragFinish( Message.Drop );
   end;
 
   Message.Result := 0;
+
+end;
+
+function TgllCustomImageView.CanAcceptDrop : Boolean;
+begin
+
+  Result := FEnableDragDrop and Enabled and ( not GetReadOnly ) and ( not FDraggingOut );
+
+end;
+
+procedure TgllCustomImageView.HandleDroppedFiles( const AFileNames : TArray<string> );
+begin
+
+  if Length( AFileNames ) = 0 then
+    Exit;
+
+  // GITLAK 2026-10-19: the host sees every dropped file first and may take the drop over.
+  var lHandled := False;
+
+  if Assigned( FOnFilesDropped ) then
+    FOnFilesDropped( Self, AFileNames, lHandled );
+
+  if lHandled then
+    Exit;
+
+  if IsSupportedExtension( ExtractFileExt( AFileNames[ 0 ] ) ) then
+    LoadFromFile( AFileNames[ 0 ] )
+  else
+  begin
+    FLastError := SUnsupportedFileFormat;
+
+    DoImageError;
+
+    Invalidate;
+  end;
+
+end;
+
+function TgllCustomImageView.CanDragOut : Boolean;
+begin
+
+  Result := FEnableDragOut and FPictureLoaded and HasImage and ( not ( csDesigning in ComponentState ) );
+
+end;
+
+function TgllCustomImageView.DragOutBaseName : string;
+begin
+
+  Result := FDragOutFileName;
+
+  // A name given with an image extension keeps only its stem: the extension follows the picture's format.
+  if IsSupportedExtension( ExtractFileExt( Result ) ) then
+    Result := ChangeFileExt( Result, '' );
+
+  Result := Trim( Result );
+
+  if Result = '' then
+    Result := SDragOutDefaultName;
+
+  Result := SafeDropFileName( Result );
+
+end;
+
+function TgllCustomImageView.SaveDragOutFile( const AFolder : string ) : string;
+begin
+
+  if ( not FPictureLoaded ) or ( not HasImage ) then
+    Exit( '' );
+
+  Result := TPath.Combine( AFolder, DragOutBaseName + GraphicFileExtension( Picture.Graphic ) );
+  Picture.Graphic.SaveToFile( Result );
+
+end;
+
+procedure TgllCustomImageView.BeginDragOut;
+begin
+
+  FDragOutPending := False;
+  EndPan;
+
+  if not EnsureOle then
+    Exit;
+
+  // The last drag's file is left until now: a drop target may copy it after DoDragDrop has returned.
+  DeleteDropFolder( FDragOutFolder );
+  FDragOutFolder := NewDropFolder;
+
+  var lFile := '';
+
+  try
+    ForceDirectories( FDragOutFolder );
+    lFile := SaveDragOutFile( FDragOutFolder );
+  except
+    on E : Exception do
+    begin
+      FLastError := E.Message;
+
+      DoImageError;
+
+      Exit;
+    end;
+  end;
+
+  if lFile = '' then
+    Exit;
+
+  MouseCapture := False;
+  FDraggingOut := True;
+
+  try
+    DragFileOut( lFile );
+  finally
+    FDraggingOut := False;
+
+    // DoDragDrop took the button-up: the control must not go on thinking the button is down.
+    ControlState := ControlState - [ csLButtonDown, csClicked ];
+  end;
 
 end;
 

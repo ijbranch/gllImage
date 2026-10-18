@@ -179,6 +179,13 @@ type
     /// <summary>The field's DisplayLabel, or the control's Name when no field is linked.</summary>
     /// <returns>The caption drawn while the picture is not loaded.</returns>
     function GetPlaceholderCaption : string; override;
+    /// <summary>Writes the field's own bytes to a file in AFolder for a drag-out, named for the format they hold, so
+    /// the file is exactly what is stored (an old TDBImage header removed).  A change made through the control and
+    /// not yet posted is written to the field first, as Post would write it.</summary>
+    /// <param name="AFolder">An existing, empty temporary folder.</param>
+    /// <returns>The file written; the picture saved by the viewer when the field's format is not recognised; an
+    /// empty string when there is nothing to drag.</returns>
+    function SaveDragOutFile( const AFolder : string ) : string; override;
 
   public
     /// <summary>Creates the component, initialising defaults and the data link.</summary>
@@ -311,6 +318,10 @@ type
     property MaxZoom;
     /// <summary>Inherited <c>EnableDragDrop</c>, published.</summary>
     property EnableDragDrop;
+    /// <summary>Inherited <c>EnableDragOut</c>, published.</summary>
+    property EnableDragOut;
+    /// <summary>Inherited <c>DragOutFileName</c>, published.</summary>
+    property DragOutFileName;
     /// <summary>Inherited <c>ShowErrorState</c>, published.</summary>
     property ShowErrorState;
     /// <summary>Inherited <c>MaxImageWidth</c>, published.</summary>
@@ -394,7 +405,7 @@ type
 implementation
 
 uses
-  System.Types;
+  System.Types, System.IOUtils;
 
 type
   /// <summary>Cancellation flag shared between a TgllDBImage and the completion of its async load.</summary>
@@ -489,6 +500,38 @@ begin
 
   if Result then
     LoadPictureEx( FMemoria, APicture, FDataLink.Field, FOnLoadCustomImage, False );
+
+end;
+
+function TgllDBImage.SaveDragOutFile( const AFolder : string ) : string;
+begin
+
+  if ( not Assigned( FDataLink.Field ) ) or ( not FDataLink.Field.IsBlob ) then
+    Exit( inherited SaveDragOutFile( AFolder ) );
+
+  // A rotation or flip not yet posted lives only in Picture: write it to the field exactly as Post would.
+  if FDataLink.Editing then
+    FDataLink.UpdateRecord;
+
+  if FDataLink.Field.IsNull then
+    Exit( '' );
+
+  var lMs := TMemoryStream.Create;
+
+  try
+    ( FDataLink.Field as TBlobField ).SaveToStream( lMs );
+    StripLegacyGraphicHeader( lMs );
+
+    var lClass := DetectImageFormat( lMs );
+
+    if lClass = nil then
+      Exit( inherited SaveDragOutFile( AFolder ) );
+
+    Result := TPath.Combine( AFolder, DragOutBaseName + GraphicClassExtension( lClass ) );
+    lMs.SaveToFile( Result );
+  finally
+    lMs.Free;
+  end;
 
 end;
 

@@ -218,6 +218,7 @@ begin
   FView.Align          := alClient;
   FView.FitToWindow    := True;
   FView.NoPicture      := 'Open a picture, or drop an image file here';
+  FView.EnableDragOut  := True;   // drag the picture out to Explorer (Ctrl+drag while it can be panned)
   FView.OnImageLoaded  := ImageChanged;
   FView.OnImageError   := ImageChanged;
   FView.OnZoomChanged  := ImageChanged;
@@ -245,6 +246,7 @@ begin
   FDBImage.Parent        := tsDatabase;
   FDBImage.Align         := alClient;
   FDBImage.FitToWindow   := True;
+  FDBImage.EnableDragOut := True;
   FDBImage.DataSource    := dsPictures;
   FDBImage.DataField     := 'Picture';
   FDBImage.OnImageLoaded := ImageChanged;

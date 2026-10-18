@@ -106,6 +106,10 @@ resourcestring
   /// <summary>Title for the Save Image dialog.</summary>
   SDialogSaveImage = 'Save Image';
 
+  // Drag and drop
+  /// <summary>File name, without extension, of a picture dragged out of a control whose DragOutFileName is empty.</summary>
+  SDragOutDefaultName = 'Picture';
+
 const
   /// <summary>Zoom step increment/decrement (10%)</summary>
   ZOOM_STEP = 0.1;
