@@ -34,9 +34,11 @@ Origin
 gllImage is derived from GDBImage, an enhanced TDBImage component by
 Sebastián Mayorá (Argentina, 2000-2025), released as freeware ("use at your
 own risk"), as later developed by Roy Lambert (EDBImage). Their work is
-acknowledged here and in the source; the freeware terms of the original code
-are theirs. The changes and additions made in gllImage are licensed under the
-terms above.
+acknowledged here and in the source. Roy Lambert has agreed to his part of the
+work being distributed under the terms above; Sebastián Mayorá's agreement has
+been requested (2026-10-19), and until it is given the freeware terms of his
+original code remain his. The changes and additions made in gllImage are
+licensed under the terms above.
 
 Contributors to the original: Liliana Troncoso (ShrinkToFit / ZoomToFit),
 Shraga Milon (WMClear / WMUndo), Mike Lischke (GraphicEx).
