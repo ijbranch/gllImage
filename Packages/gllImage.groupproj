@@ -1,0 +1,72 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{2576CF53-8B9D-4581-889F-A2878F0F354A}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="gllImageR.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="gllImageD.dproj">
+            <Dependencies>gllImageR.dproj</Dependencies>
+        </Projects>
+        <Projects Include="..\Tests\gllImageTests.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="..\Demo\gllImageDemo.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="gllImageR">
+        <MSBuild Projects="gllImageR.dproj"/>
+    </Target>
+    <Target Name="gllImageR:Clean">
+        <MSBuild Projects="gllImageR.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="gllImageR:Make">
+        <MSBuild Projects="gllImageR.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="gllImageD" DependsOnTargets="gllImageR">
+        <MSBuild Projects="gllImageD.dproj"/>
+    </Target>
+    <Target Name="gllImageD:Clean" DependsOnTargets="gllImageR:Clean">
+        <MSBuild Projects="gllImageD.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="gllImageD:Make" DependsOnTargets="gllImageR:Make">
+        <MSBuild Projects="gllImageD.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="gllImageTests">
+        <MSBuild Projects="..\Tests\gllImageTests.dproj"/>
+    </Target>
+    <Target Name="gllImageTests:Clean">
+        <MSBuild Projects="..\Tests\gllImageTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="gllImageTests:Make">
+        <MSBuild Projects="..\Tests\gllImageTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="gllImageDemo">
+        <MSBuild Projects="..\Demo\gllImageDemo.dproj"/>
+    </Target>
+    <Target Name="gllImageDemo:Clean">
+        <MSBuild Projects="..\Demo\gllImageDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="gllImageDemo:Make">
+        <MSBuild Projects="..\Demo\gllImageDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="gllImageR;gllImageD;gllImageTests;gllImageDemo"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="gllImageR:Clean;gllImageD:Clean;gllImageTests:Clean;gllImageDemo:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="gllImageR:Make;gllImageD:Make;gllImageTests:Make;gllImageDemo:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

@@ -1,0 +1,27 @@
+# Build output
+Win32/
+Win64/
+*.dcu
+*.bpl
+*.dcp
+*.exe
+*.rsm
+*.map
+*.drc
+*.dll
+
+# IDE state and backups
+*.local
+*.identcache
+*.stat
+*.dsk
+*.tvsconfig
+__history/
+__recovery/
+*.$$$
+*.bak
+*.~*
+
+# Test and tool output
+*-results.xml
+CopyJxlDlls.txt

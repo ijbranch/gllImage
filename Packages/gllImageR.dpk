@@ -1,0 +1,58 @@
+﻿(* Copyright (c) 2026 Ian Branch. All rights reserved.
+ *
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ *)
+
+{
+  gllImageR - gllImage runtime package.
+  TgllCustomImageView / TgllImageView (gllImage.View) and the data-aware TgllDBImage (gllImage.DB),
+  with their format detection and helpers. Registers no components; gllImageD does that.
+}
+package gllImageR;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS OFF}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE RELEASE}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'gllImage - picture viewer and data-aware image controls'}
+{$LIBSUFFIX AUTO}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  vcl,
+  vcldb,
+  vclimg,
+  dbrtl,
+  LibJxl;
+
+contains
+  gllImage.Consts in '..\Source\gllImage.Consts.pas',
+  gllImage.Utils in '..\Source\gllImage.Utils.pas',
+  gllImage.View in '..\Source\gllImage.View.pas',
+  gllImage.DB in '..\Source\gllImage.DB.pas';
+
+end.
