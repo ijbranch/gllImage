@@ -2,7 +2,9 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [In-Service]
+
+> Changes below are live as soon as the project is Release-built and installed - there is no separate release step, so there is no `[Unreleased]` backlog (Ian, 2026-10-19: "As soon as these are Release built they are Released").
 
 ### Added
 - OLE drag and drop (`EnableDragDrop`): virtual files can be dropped as well as files from Explorer (an Outlook attachment, an image from a web browser or a zip folder), written to a temporary folder for the length of the drop; the shell's drag image shows over the control; a read-only or disabled control shows the no-drop cursor.  `WM_DROPFILES` remains the fallback when OLE cannot be initialised.  **Why:** the suite's picture forms needed gllDragAndDrop for attachments; the control now does it with nothing beyond the RTL and VCL (2026-10-19) — `gllImage.DragDrop.pas`, `gllImage.View.pas`, `gllImageR.dpk`, `gllImageR.dproj`
