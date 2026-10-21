@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Packages `gllImageR` / `gllImageD` (Win32 + Win64), the group project, the DUnitX suite, the demo with two JPEG XL samples, and the documents (2026-10-19) — `gllImageR.dpk`, `gllImageD.dpk`, `gllImage.groupproj`, `gllImage.Consts.pas`, `gllImage.Register.pas`, `gllImageTests.dpr`, `TestGllImage.pas`, `gllImageDemo.dpr`, `Demo.Main.pas`, `Demo.Main.dfm`, `Sample-Landscape.jxl`, `Sample-Portrait.jxl`, `README.md`, `Help.md`, `Users Guide.md`, `.gitignore`
 
 ### Changed
+- `gllImageSkiaR` now builds against `D:\gllSkia4Delphi`'s Skia packages, not RAD Studio's bundled ones ( the Skia switch-over ); no source change.  Rebuilt `gllImageR`, `gllImageSkiaR` and `gllImageD` in four modes with zero hints; `gllImageTests` 50 passed (2026-10-22) — `Help.md`, `Packages/gllImageD.dproj`, `Packages/gllImageR.dproj`, `Packages/gllImageSkiaR.dproj`, `Tests/gllImageTests.dproj`
 - In the designer the control no longer registers for dropped files: the designer keeps its own drag and drop (2026-10-19) — `gllImage.View.pas`
 - `LICENSE` records that Roy Lambert has agreed to BSD-3 for his part of the work, and that Sebastián Mayorá's agreement has been requested (2026-10-19) — `LICENSE`
 - The documents are written for outside readers: libjxl-delphi linked instead of local paths, the one place the tests and the demo expect it named, internal tool names dropped, and a note on how gllImage was developed (2026-10-19) — `README.md`, `Help.md`

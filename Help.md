@@ -35,7 +35,7 @@ Building, deploying, and the things that look wrong and are not.  For how to use
 
 The JPEG XL binding loads `jxl.dll` (or upstream's `jxl.dll` + `jxl_threads.dll` + `jxl_cms.dll`) **only when a JPEG XL is decoded or encoded**.  Without it every other format works, and a JPEG XL fails with a load error in `LastError`.  libjxl-delphi's `CopyJxlDlls.ps1 -Platform Win64 -OutputDir <exe folder>` copies the right DLLs and checks them; the tests and the demo run it as a post-build step.
 
-**`sk4d.dll`, for `RenderMode = rmSkia`.**  An application that links `gllImage.Skia` loads `sk4d.dll` when it starts (Skia binds it in its units' initialisation), so it must be beside the exe, of the exe's bitness, and match the Skia units it was compiled against; on this PC every copy is gllSkia4Delphi's, which serves both RAD's and the fork's units.  The test runner copies `$(BDS)\Redist\<Platform>\sk4d.dll` after building.
+**`sk4d.dll`, for `RenderMode = rmSkia`.**  An application that links `gllImage.Skia` loads `sk4d.dll` when it starts (Skia binds it in its units' initialisation), so it must be beside the exe, of the exe's bitness, and match the Skia units it was compiled against; on this PC every copy is gllSkia4Delphi's, which serves both RAD's and the fork's units.  The test runner copies `$(BDS)\Redist\<Platform>\sk4d.dll` after building ( the fork's DLL since 2026-10-21; a RAD Studio update puts RAD's older copy back there ).  Since 2026-10-22 the `Skia.Package.*` this package requires are gllSkia4Delphi's ( RAD's bundled Skia is quarantined ), so build that fork's packages before `gllImageSkiaR`.
 
 ## 4. Things that look wrong and are not
 
