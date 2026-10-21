@@ -15,11 +15,11 @@ Both descend from `TgllCustomImageView`, so they behave identically:
 | **Drag and drop** | Drop files from Explorer **and virtual files** (an e-mail attachment, an image from a web browser); drag the picture out as a file (`EnableDragOut`), in its own format. |
 | **Data** | `TgllDBImage` stores the bytes of a loaded file exactly as they are, loads asynchronously on request, skips the header old `TDBImage` controls wrote, and works in a `TDBCtrlGrid`. |
 
-**Delphi 13, Win32 and Win64, VCL.**  The only dependency outside the RTL and VCL is LibJxl, for JPEG XL.
+**Delphi 13, Win32 and Win64, VCL.**  The only dependency outside the RTL and VCL is LibJxl, for JPEG XL.  High-quality scaling through Skia (`RenderMode = rmSkia`) is optional: it lives in its own unit and package (`gllImage.Skia`, `gllImageSkiaR`), so the core never depends on Skia.
 
 ## Getting started
 
-1. Build the `LibJxl` package from [libjxl-delphi](https://github.com/ijbranch/libjxl-delphi) first: `gllImageR` requires it.  Then build `Packages\gllImage.groupproj` (runtime `gllImageR`, design-time `gllImageD`, the tests and the demo).
+1. Build the `LibJxl` package from [libjxl-delphi](https://github.com/ijbranch/libjxl-delphi) first: `gllImageR` requires it.  Then build `Packages\gllImage.groupproj` (runtime `gllImageR`, the optional Skia renderer `gllImageSkiaR`, design-time `gllImageD`, the tests and the demo).
 2. Install `gllImageD` from the 64-bit IDE (`bin64\bds.exe`).  The controls appear on the **gllImage** palette page.
 3. Put `jxl.dll` beside your executable ([libjxl-delphi](https://github.com/ijbranch/libjxl-delphi)'s `CopyJxlDlls.ps1` does it).  It is loaded only when a JPEG XL is decoded or encoded.
 

@@ -24,7 +24,9 @@ uses
   gllImage.DragDrop in '..\Source\gllImage.DragDrop.pas',
   gllImage.View in '..\Source\gllImage.View.pas',
   gllImage.DB in '..\Source\gllImage.DB.pas',
-  TestGllImage in 'TestGllImage.pas';
+  TestGllImage in 'TestGllImage.pas',
+  gllImage.Skia in '..\Source\gllImage.Skia.pas',
+  TestGllImageSkia in 'TestGllImageSkia.pas';
 
 var
   intfRunner: ITestRunner;

@@ -25,6 +25,7 @@ Both share every property below.  `TgllDBImage` adds `DataSource`, `DataField`, 
 | `Stretch` / `Proportional` | `TDBImage` compatibility: set the three above as `TDBImage` would.  Not stored. |
 | `Center` | Centre a picture smaller than the control (default True). |
 | `ZoomFactor`, `MinZoom`, `MaxZoom` | The zoom when not fitting (1.0 = 100%).  Lower `MinZoom` (for example 0.02) for very large photos. |
+| `RenderMode` | How a fitted or zoomed picture is scaled: `rmNormal` (default, the VCL's `StretchDraw`) or `rmSkia` (high-quality resampling).  `rmSkia` needs `gllImage.Skia` in the application's `uses` and `sk4d.dll` beside the exe; without the unit it draws as `rmNormal`.  See below. |
 | `ScrollBars` | Show scroll bars while the zoomed picture is larger than the control.  The wheel then scrolls (Shift+wheel horizontally) and Ctrl+wheel zooms. |
 | `EnablePan` | Drag the picture with the mouse when it is larger than the control. |
 | `Rotation` | Display-only rotation (`ro0`, `ro90`, `ro180`, `ro270`); the stored picture is untouched. |
@@ -33,6 +34,14 @@ Both share every property below.  `TgllDBImage` adds `DataSource`, `DataField`, 
 | `ShowErrorState` | Draw a failed load (with `LastError`) in the control. |
 
 **Zooming from a fitted picture.**  `ZoomIn`, `ZoomOut` and `ZoomBy( factor )` first take the scale the picture is shown at, so a step continues from what is on screen.  `ZoomBy( 1.25 )` and `ZoomBy( 0.8 )` give 25% steps; `ZoomIn` / `ZoomOut` step by 10 points.  `ResetZoom` returns to 100%; `ResetView` also clears the pan and rotation.
+
+**`RenderMode`: why `rmSkia`.**  On a 32-bit display the VCL's `StretchDraw` shrinks a picture by dropping whole rows and columns of pixels, so a large photo fitted to a window (a 12 MP phone photo of a serial plate or a document) shows moire and broken small text.  `rmSkia` resamples it properly: trilinear filtering with mipmaps when shrinking, cubic when enlarging.  The picture is still decoded by the VCL, so formats, EXIF orientation and colours are exactly as with `rmNormal`; only the scaling changes.  To use it:
+
+1. Add `gllImage.Skia` to a `uses` clause of the application (the form that uses the viewer is the natural place).  It registers the renderer when it initialises.  It is in its own package, `gllImageSkiaR`, so `gllImageR` itself never depends on Skia.
+2. Set `RenderMode := rmSkia` on the viewer (Object Inspector or code).
+3. Deploy `sk4d.dll` beside the exe.
+
+It renders only the visible part of the picture, so a deep zoom costs no more than the window, and caches the result until the picture, its size on screen or the visible part changes.  It uses Skia's raster (CPU) renderer only, so it is safe in remote and VirtualUI sessions.  Metafiles (vector, already sharp), icons, animated GIFs and colour-keyed transparency are left to `StretchDraw`, as is any picture shown at exactly 100%.
 
 **Panning in code.**  `PanBy( dx, dy )` moves the picture within the same limits as a drag; `PanOffset` and `ScrollPosition` report where it is.
 

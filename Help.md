@@ -15,8 +15,9 @@ Building, deploying, and the things that look wrong and are not.  For how to use
 | `Source\gllImage.Utils.pas` | Format detection, loading, rotate / flip / thumbnail / print, the loader registry |
 | `Source\gllImage.DragDrop.pas` | OLE drag and drop: the drop target (real and virtual files), the drop source and the drag-out helpers |
 | `Source\gllImage.Consts.pas` | Resource strings and constants |
+| `Source\gllImage.Skia.pas` | The optional Skia renderer for `RenderMode = rmSkia` (`TgllSkiaImageRenderer`); registers itself when linked |
 | `Source\gllImage.Register.pas` + `.dcr` | Palette registration and icons (design-time only) |
-| `Packages\gllImageR` / `gllImageD` | Runtime and design-time packages; `gllImage.groupproj` builds both, the tests and the demo |
+| `Packages\gllImageR` / `gllImageSkiaR` / `gllImageD` | Runtime, optional Skia renderer, and design-time packages; `gllImage.groupproj` builds all three, the tests and the demo |
 | `Tests\gllImageTests` | DUnitX suite (console runner; results in `gllImageTests-results.xml`) |
 | `Demo\gllImageDemo` | Both controls side by side, with `Sample-Landscape.jxl` (lossy) and `Sample-Portrait.jxl` (lossless) |
 
@@ -26,6 +27,7 @@ Building, deploying, and the things that look wrong and are not.  For how to use
 - Outputs follow the estate standard: BPL / DCP in `$(BDSCOMMONDIR)\Bpl|Dcp\<Platform>` (Release) and `...\<Platform>\Debug`; DCUs project-local.
 - `gllImageR` **requires `LibJxl`**, the package of [libjxl-delphi](https://github.com/ijbranch/libjxl-delphi); build it first if its DCP is missing (`E2202 Required package 'LibJxl' not found`).
 - An application compiling the source needs **both** gllImage's `Source` folder and libjxl-delphi's `Source` folder on its search path.
+- **`gllImageSkiaR` requires `gllImageR`, `Skia.Package.RTL` and `Skia.Package.VCL`**, so build `gllImageR` in Release first: a Debug build of `gllImageSkiaR` resolves `gllImageR` from the shared Release DCP, and a stale one gives `E2003 Undeclared identifier: 'TgllImageRenderer'`.  The Skia packages are RAD Studio's bundled ones until the gllSkia4Delphi switch-over, then the fork's.  `gllImageR` stays free of Skia: only applications that set `RenderMode = rmSkia` link `gllImage.Skia`.
 - **The tests and the demo look for libjxl-delphi at `D:\gllLibJxl\delphi`** (search path, and the post-build step that runs its `CopyJxlDlls.ps1`).  With it elsewhere, change both in `Tests\gllImageTests.dproj` and `Demo\gllImageDemo.dproj`.
 - Install `gllImageD` from `bin64\bds.exe` only.  If a form reports `Class TgllDBImage not found`, the package is not installed: **never click Ignore** (saving would remove the control from the `.dfm`).
 
@@ -33,7 +35,11 @@ Building, deploying, and the things that look wrong and are not.  For how to use
 
 The JPEG XL binding loads `jxl.dll` (or upstream's `jxl.dll` + `jxl_threads.dll` + `jxl_cms.dll`) **only when a JPEG XL is decoded or encoded**.  Without it every other format works, and a JPEG XL fails with a load error in `LastError`.  libjxl-delphi's `CopyJxlDlls.ps1 -Platform Win64 -OutputDir <exe folder>` copies the right DLLs and checks them; the tests and the demo run it as a post-build step.
 
+**`sk4d.dll`, for `RenderMode = rmSkia`.**  An application that links `gllImage.Skia` loads `sk4d.dll` when it starts (Skia binds it in its units' initialisation), so it must be beside the exe, of the exe's bitness, and match the Skia units it was compiled against; on this PC every copy is gllSkia4Delphi's, which serves both RAD's and the fork's units.  The test runner copies `$(BDS)\Redist\<Platform>\sk4d.dll` after building.
+
 ## 4. Things that look wrong and are not
+
+- **`RenderMode = rmSkia` looks exactly like `rmNormal`.**  Either `gllImage.Skia` is not linked (a debugger's Event Log shows "gllImage: RenderMode is rmSkia, but gllImage.Skia is not linked" once), the picture is shown at exactly 100%, or it is one Skia leaves to `StretchDraw`: a metafile, an icon, an animated GIF or colour-keyed transparency.
 
 - **`Stretch` and `Proportional` are never written to a `.dfm`.**  They are `TDBImage` compatibility: reading an old form maps them onto `ShrinkToFit`, `ZoomToFit` and `MaintainAspectRatio`, which are what gets saved.
 - **A rotated or flipped JPEG is re-encoded.**  Changing pixels needs a new encode; the format and its settings are kept, but a lossy format loses a little each time.  PNG and BMP are lossless.  A decoded JPEG XL does not know how its file was encoded, so it is re-encoded at libjxl's default (distance 1.0, visually lossless).
@@ -47,4 +53,4 @@ The JPEG XL binding loads `jxl.dll` (or upstream's `jxl.dll` + `jxl_threads.dll`
 
 ## 5. Tests
 
-`Tests\gllImageTests` (DUnitX, Win64 Release console, `FailsOnNoAsserts`): the loader registry, the viewer (load, read-only, flips and rotation keeping their format, pan limits centred / uncentred / rotated / fitted, zoom from fit, `Stretch` / `Proportional`, a real `WM_DROPFILES`, the drop rules and drag-out file, `.jxl` saving), OLE drag and drop (the shell's data object for a real file, virtual files from an HGLOBAL and a stream with safe unique names, the drop target refusing or handing over a file that exists only during the drop, safe file names), the data link (load from the field, edit / modify / Post, read-only, the old header, byte-exact `LoadFromFile`, a JPEG XL round trip, the `TGDBImage` alias, drag-out of the field's bytes and of an unposted flip) and format detection.  The JPEG XL tests need `jxl.dll` beside the runner (the post-build step copies it).  Every behaviour fix is mutation-checked: the fix was reverted and the suite shown to fail.
+`Tests\gllImageTests` (DUnitX, Win64 Release console, `FailsOnNoAsserts`): the loader registry, the viewer (load, read-only, flips and rotation keeping their format, pan limits centred / uncentred / rotated / fitted, zoom from fit, `Stretch` / `Proportional`, a real `WM_DROPFILES`, the drop rules and drag-out file, `.jxl` saving), OLE drag and drop (the shell's data object for a real file, virtual files from an HGLOBAL and a stream with safe unique names, the drop target refusing or handing over a file that exists only during the drop, safe file names), the data link (load from the field, edit / modify / Post, read-only, the old header, byte-exact `LoadFromFile`, a JPEG XL round trip, the `TGDBImage` alias, drag-out of the field's bytes and of an unposted flip) and format detection, and `TestGllImageSkia` for `RenderMode` (the default, which pictures Skia takes, the 1:1 decline, 1-px stripes shrunk 4:1 and 13:1 coming out mid-grey with Skia where `StretchDraw` keeps whole columns, the fallback without a renderer drawing byte-for-byte as normal, and no stale picture after a change).  The JPEG XL tests need `jxl.dll` beside the runner, and the Skia tests `sk4d.dll` (the post-build step copies it).  Every behaviour fix is mutation-checked: the fix was reverted and the suite shown to fail.

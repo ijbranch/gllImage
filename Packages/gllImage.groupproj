@@ -6,6 +6,9 @@
         <Projects Include="gllImageR.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="gllImageSkiaR.dproj">
+            <Dependencies>gllImageR.dproj</Dependencies>
+        </Projects>
         <Projects Include="gllImageD.dproj">
             <Dependencies>gllImageR.dproj</Dependencies>
         </Projects>
@@ -31,6 +34,15 @@
     </Target>
     <Target Name="gllImageR:Make">
         <MSBuild Projects="gllImageR.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="gllImageSkiaR" DependsOnTargets="gllImageR">
+        <MSBuild Projects="gllImageSkiaR.dproj"/>
+    </Target>
+    <Target Name="gllImageSkiaR:Clean" DependsOnTargets="gllImageR:Clean">
+        <MSBuild Projects="gllImageSkiaR.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="gllImageSkiaR:Make" DependsOnTargets="gllImageR:Make">
+        <MSBuild Projects="gllImageSkiaR.dproj" Targets="Make"/>
     </Target>
     <Target Name="gllImageD" DependsOnTargets="gllImageR">
         <MSBuild Projects="gllImageD.dproj"/>
@@ -60,13 +72,13 @@
         <MSBuild Projects="..\Demo\gllImageDemo.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="gllImageR;gllImageD;gllImageTests;gllImageDemo"/>
+        <CallTarget Targets="gllImageR;gllImageSkiaR;gllImageD;gllImageTests;gllImageDemo"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="gllImageR:Clean;gllImageD:Clean;gllImageTests:Clean;gllImageDemo:Clean"/>
+        <CallTarget Targets="gllImageR:Clean;gllImageSkiaR:Clean;gllImageD:Clean;gllImageTests:Clean;gllImageDemo:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="gllImageR:Make;gllImageD:Make;gllImageTests:Make;gllImageDemo:Make"/>
+        <CallTarget Targets="gllImageR:Make;gllImageSkiaR:Make;gllImageD:Make;gllImageTests:Make;gllImageDemo:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

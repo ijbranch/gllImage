@@ -312,6 +312,8 @@ type
     property EnableMouseWheel;
     /// <summary>Inherited <c>ZoomFactor</c>, published.</summary>
     property ZoomFactor;
+    /// <summary>Inherited <c>RenderMode</c>, published.</summary>
+    property RenderMode;
     /// <summary>Inherited <c>MinZoom</c>, published.</summary>
     property MinZoom;
     /// <summary>Inherited <c>MaxZoom</c>, published.</summary>

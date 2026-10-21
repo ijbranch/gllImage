@@ -53,6 +53,37 @@ type
   TFilesDroppedEvent = procedure( Sender : TObject; const FileNames : TArray<string>; var Handled : Boolean ) of object;
 
   /// <summary>
+  ///   How a viewer scales its picture whenever it is drawn at any size other than 1:1 ( fitted, shrunk, zoomed ).
+  /// </summary>
+  /// <remarks>
+  ///   rmNormal is the VCL's own StretchDraw, the default: fast, but on a 32-bit display it drops whole rows and
+  ///   columns of pixels when it shrinks, which shows as moire and broken fine detail on large photos.  rmSkia uses
+  ///   Skia's high-quality resampling ( trilinear filtering with mipmaps when shrinking, cubic when enlarging ) through
+  ///   the renderer that the unit gllImage.Skia registers; without that unit linked, rmSkia draws exactly as rmNormal.
+  /// </remarks>
+  TgllImageRenderMode = ( rmNormal, rmSkia );
+
+  /// <summary>
+  ///   A drawing back end for RenderMode = rmSkia.  gllImage.Skia registers one in TgllCustomImageView.SkiaRenderer,
+  ///   so the core package never depends on Skia.
+  /// </summary>
+  TgllImageRenderer = class abstract
+  public
+    /// <summary>Draws AGraphic scaled into ADest, clipped to the canvas's clip box.</summary>
+    /// <param name="ACanvas">The viewer's canvas.</param>
+    /// <param name="ADest">Where the whole picture goes, in canvas coordinates; may extend beyond the control.</param>
+    /// <param name="AGraphic">The picture to draw, never nil or empty.</param>
+    /// <param name="AGeneration">Changes whenever the picture's content may have changed, so a cache keyed on it and
+    /// on AGraphic never shows a stale picture.</param>
+    /// <param name="ACache">The viewer's private cache slot: the renderer may create, replace or free the object in
+    /// it, and the viewer frees whatever is left when it is destroyed or its RenderMode changes.</param>
+    /// <returns>False when the renderer does not handle this picture ( a metafile, an animation, colour-keyed
+    /// transparency, a 1:1 draw ): the viewer then draws it the normal way.</returns>
+    function Draw( ACanvas : TCanvas; const ADest : TRect; AGraphic : TGraphic; AGeneration : Cardinal;
+      var ACache : TObject ) : Boolean; virtual; abstract;
+  end;
+
+  /// <summary>
   ///   Base class of the gllImage picture viewers: everything except where the picture comes from.
   /// </summary>
   /// <remarks>
@@ -63,7 +94,19 @@ type
   ///   GetPlaceholderCaption and LoadFromFile.
   /// </remarks>
   TgllCustomImageView = class( TCustomControl )
+  private class var
+    /// <summary>The renderer for RenderMode = rmSkia, registered by gllImage.Skia; nil when that unit is not linked.
+    /// Owned by whoever registers it.</summary>
+    FSkiaRenderer                : TgllImageRenderer;
+    /// <summary>True once the missing-renderer warning has been written, so it is written once per process.</summary>
+    FSkiaRendererMissingReported : Boolean;
   private
+    /// <summary>How the picture is scaled when drawn at any size other than 1:1.</summary>
+    FRenderMode         : TgllImageRenderMode;
+    /// <summary>The renderer's cache for this viewer ( see TgllImageRenderer.Draw ); owned.</summary>
+    FRenderCache        : TObject;
+    /// <summary>Bumped whenever FDrawPict's content changes, so a renderer cache cannot show a stale picture.</summary>
+    FRenderGeneration   : Cardinal;
     /// <summary>Border drawn round the control.</summary>
     FBorderStyle        : TBorderStyle;
     /// <summary>When True images larger than the control are scaled down to fit.</summary>
@@ -275,6 +318,15 @@ type
     /// <summary>Setter for EnableDragDrop; registers or revokes the window as a drop target.</summary>
     /// <param name="Value">The new value.</param>
     procedure SetEnableDragDrop( const Value : Boolean );
+    /// <summary>Setter for RenderMode; drops the renderer cache and repaints.</summary>
+    /// <param name="Value">The new value.</param>
+    procedure SetRenderMode( const Value : TgllImageRenderMode );
+    /// <summary>
+    ///   Draws FDrawPict scaled into ADest: through SkiaRenderer when RenderMode is rmSkia and the renderer accepts the
+    ///   picture, otherwise with the VCL's StretchDraw.  The one place both scaled draws go through.
+    /// </summary>
+    /// <param name="ADest">Where the whole picture goes, in client coordinates.</param>
+    procedure DrawScaled( const ADest : TRect );
     /// <summary>Setter for ZoomFactor; clamps to MinZoom..MaxZoom.</summary>
     /// <param name="Value">The new value.</param>
     procedure SetZoomFactor( const Value : Double );
@@ -865,6 +917,17 @@ type
     /// </summary>
     property ZoomFactor : Double read FZoomFactor write SetZoomFactor;
     /// <summary>
+    ///   How the picture is scaled when it is drawn at any size other than 1:1: rmNormal ( the default, the VCL's
+    ///   StretchDraw ) or rmSkia ( Skia's high-quality resampling; add gllImage.Skia to the application's uses, or it
+    ///   draws as rmNormal ).  See TgllImageRenderMode.
+    /// </summary>
+    property RenderMode : TgllImageRenderMode read FRenderMode write SetRenderMode default rmNormal;
+    /// <summary>
+    ///   The renderer used for RenderMode = rmSkia.  gllImage.Skia sets it in its initialization and clears it in its
+    ///   finalization; nil means rmSkia draws as rmNormal.  Owned by whoever sets it.
+    /// </summary>
+    class property SkiaRenderer : TgllImageRenderer read FSkiaRenderer write FSkiaRenderer;
+    /// <summary>
     ///   Minimum zoom factor allowed (must be greater than 0 and less than or equal to MaxZoom).
     /// </summary>
     property MinZoom : Double read FMinZoom write SetMinZoom;
@@ -1023,6 +1086,8 @@ type
     property EnableMouseWheel;
     /// <summary>Inherited <c>ZoomFactor</c>, published.</summary>
     property ZoomFactor;
+    /// <summary>Inherited <c>RenderMode</c>, published.</summary>
+    property RenderMode;
     /// <summary>Inherited <c>MinZoom</c>, published.</summary>
     property MinZoom;
     /// <summary>Inherited <c>MaxZoom</c>, published.</summary>
@@ -1154,6 +1219,9 @@ begin
   FRotation            := ro0;
   FIsAnimating         := False;
   FShowContextMenu     := True;
+  FRenderMode          := rmNormal;
+  FRenderCache         := nil;
+  FRenderGeneration    := 0;
 
   FDrawPict         := TPicture.Create;
   FCheckerTile      := TBitmap.Create;
@@ -1198,6 +1266,7 @@ begin
   FCheckerTile.Free;
   FPicture.Free;
   FDrawPict.Free;
+  FRenderCache.Free;
 
   inherited Destroy;
 
@@ -2474,6 +2543,41 @@ begin
 
 end;
 
+procedure TgllCustomImageView.SetRenderMode( const Value : TgllImageRenderMode );
+begin
+
+  if FRenderMode <> Value then
+  begin
+    FRenderMode := Value;
+    FreeAndNil( FRenderCache );
+    Invalidate;
+  end;
+
+end;
+
+procedure TgllCustomImageView.DrawScaled( const ADest : TRect );
+begin
+
+  if ( FRenderMode = rmSkia ) then
+  begin
+    if Assigned( FSkiaRenderer ) then
+    begin
+      if FSkiaRenderer.Draw( Canvas, ADest, FDrawPict.Graphic, FRenderGeneration, FRenderCache ) then
+        Exit;
+    end
+    else if ( not FSkiaRendererMissingReported ) then
+    begin
+      // GITLAK 2026-10-21: said once, not on every paint; the picture is still drawn, the normal way.
+      FSkiaRendererMissingReported := True;
+      OutputDebugString( 'gllImage: RenderMode is rmSkia, but gllImage.Skia is not linked, so pictures are drawn ' +
+        'with StretchDraw.  Add gllImage.Skia to the application''s uses.' );
+    end;
+  end;
+
+  Canvas.StretchDraw( ADest, FDrawPict.Graphic );
+
+end;
+
 procedure TgllCustomImageView.SetCheckerColour2( const Value : TColor );
 begin
 
@@ -2689,12 +2793,15 @@ begin
 
       if ( csPaintCopy in ControlState ) and LoadPaintCopy( FDrawPict ) then
       begin
+        Inc( FRenderGeneration );
+
         if ( FDrawPict.Graphic is TBitmap ) then
           FDrawPict.Bitmap.IgnorePalette := QuickDraw;
       end
       else if ( not FPictureValid ) then
       begin
         FDrawPict.Assign( Picture );
+        Inc( FRenderGeneration );
 
         if ( FRotation <> ro0 ) and ( FDrawPict.Graphic <> nil ) and ( not FDrawPict.Graphic.Empty ) then
         begin
@@ -2758,7 +2865,7 @@ begin
           if ( FTransparentMode = tmCheckerboard ) and FDrawPict.Graphic.Transparent then
             DrawCheckerboard( Canvas, lDrawRect );
 
-          Canvas.StretchDraw( lDrawRect, FDrawPict.Graphic );
+          DrawScaled( lDrawRect );
         end
         else
         begin
@@ -2772,7 +2879,7 @@ begin
           if ( FTransparentMode = tmCheckerboard ) and FDrawPict.Graphic.Transparent then
             DrawCheckerboard( Canvas, lR );
 
-          Canvas.StretchDraw( lR, FDrawPict.Graphic );
+          DrawScaled( lR );
           ExcludeClipRect( Canvas.Handle, lR.Left, lR.Top, lR.Right, lR.Bottom );
           Canvas.FillRect( ClientRect );
           SelectClipRgn( Canvas.Handle, 0 );
@@ -2790,6 +2897,7 @@ begin
       begin
         FDrawPict.Assign( nil );
         FPictureValid := False;
+        Inc( FRenderGeneration );
       end;
     end;
   end
