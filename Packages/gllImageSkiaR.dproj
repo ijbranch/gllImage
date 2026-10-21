@@ -108,8 +108,8 @@
         <VerInfo_MajorVer>1</VerInfo_MajorVer>
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
-        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - Skia renderer for the picture viewers (RenderMode ;FileVersion=1.0.0.4;InternalName=gllImageSkiaR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.4;Comments=;CFBundleName=</VerInfo_Keys>
-        <VerInfo_Build>4</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - Skia renderer for the picture viewers (RenderMode ;FileVersion=1.0.0.5;InternalName=gllImageSkiaR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.5;Comments=;CFBundleName=</VerInfo_Keys>
+        <VerInfo_Build>5</VerInfo_Build>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
@@ -117,8 +117,8 @@
         <VerInfo_MajorVer>1</VerInfo_MajorVer>
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
-        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - Skia renderer for the picture viewers (RenderMode ;FileVersion=1.0.0.4;InternalName=gllImageSkiaR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.4;Comments=;CFBundleName=</VerInfo_Keys>
-        <VerInfo_Build>4</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - Skia renderer for the picture viewers (RenderMode ;FileVersion=1.0.0.5;InternalName=gllImageSkiaR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.5;Comments=;CFBundleName=</VerInfo_Keys>
+        <VerInfo_Build>5</VerInfo_Build>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
@@ -131,8 +131,8 @@
         <VerInfo_MajorVer>1</VerInfo_MajorVer>
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
-        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - Skia renderer for the picture viewers (RenderMode ;FileVersion=1.0.0.4;InternalName=gllImageSkiaR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.4;Comments=;CFBundleName=</VerInfo_Keys>
-        <VerInfo_Build>4</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - Skia renderer for the picture viewers (RenderMode ;FileVersion=1.0.0.5;InternalName=gllImageSkiaR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.5;Comments=;CFBundleName=</VerInfo_Keys>
+        <VerInfo_Build>5</VerInfo_Build>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
@@ -140,8 +140,8 @@
         <VerInfo_MajorVer>1</VerInfo_MajorVer>
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
-        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - Skia renderer for the picture viewers (RenderMode ;FileVersion=1.0.0.4;InternalName=gllImageSkiaR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.4;Comments=;CFBundleName=</VerInfo_Keys>
-        <VerInfo_Build>4</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - Skia renderer for the picture viewers (RenderMode ;FileVersion=1.0.0.5;InternalName=gllImageSkiaR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.5;Comments=;CFBundleName=</VerInfo_Keys>
+        <VerInfo_Build>5</VerInfo_Build>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
