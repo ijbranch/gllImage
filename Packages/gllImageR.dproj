@@ -108,8 +108,8 @@
         <VerInfo_MajorVer>1</VerInfo_MajorVer>
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
-        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - picture viewer and data-aware image controls;FileVersion=1.0.0.12;InternalName=gllImageR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.12;Comments=;CFBundleName=</VerInfo_Keys>
-        <VerInfo_Build>12</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - picture viewer and data-aware image controls;FileVersion=1.0.0.15;InternalName=gllImageR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.15;Comments=;CFBundleName=</VerInfo_Keys>
+        <VerInfo_Build>15</VerInfo_Build>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
@@ -117,8 +117,8 @@
         <VerInfo_MajorVer>1</VerInfo_MajorVer>
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
-        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - picture viewer and data-aware image controls;FileVersion=1.0.0.12;InternalName=gllImageR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.12;Comments=;CFBundleName=</VerInfo_Keys>
-        <VerInfo_Build>12</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - picture viewer and data-aware image controls;FileVersion=1.0.0.15;InternalName=gllImageR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.15;Comments=;CFBundleName=</VerInfo_Keys>
+        <VerInfo_Build>15</VerInfo_Build>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
@@ -131,8 +131,8 @@
         <VerInfo_MajorVer>1</VerInfo_MajorVer>
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
-        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - picture viewer and data-aware image controls;FileVersion=1.0.0.11;InternalName=gllImageR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.11;Comments=;CFBundleName=</VerInfo_Keys>
-        <VerInfo_Build>11</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - picture viewer and data-aware image controls;FileVersion=1.0.0.14;InternalName=gllImageR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.14;Comments=;CFBundleName=</VerInfo_Keys>
+        <VerInfo_Build>14</VerInfo_Build>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
@@ -140,8 +140,8 @@
         <VerInfo_MajorVer>1</VerInfo_MajorVer>
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
-        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - picture viewer and data-aware image controls;FileVersion=1.0.0.14;InternalName=gllImageR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.14;Comments=;CFBundleName=</VerInfo_Keys>
-        <VerInfo_Build>14</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage - picture viewer and data-aware image controls;FileVersion=1.0.0.17;InternalName=gllImageR;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=;ProductName=gllImage;ProductVersion=1.0.0.17;Comments=;CFBundleName=</VerInfo_Keys>
+        <VerInfo_Build>17</VerInfo_Build>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">

@@ -16,6 +16,8 @@ program gllImageTests;
 
 uses
   System.SysUtils,
+  Vcl.Themes,
+  Vcl.Styles,
   DUnitX.Loggers.Console,
   DUnitX.Loggers.Xml.NUnit,
   DUnitX.TestFramework,
@@ -34,6 +36,17 @@ var
   sXmlFile: string;
 
 begin
+
+  // A suite that puts a form or control on screen runs under the estate's VCL style (Ian, 2026-10-23), so the tests
+  // meet the UI as it presents in use.  The .dproj embeds Aqua Light Slate; the lines below activate it.
+  // TrySetStyle runs without its error dialog, which would hang an unattended run on a modal; a style that is
+  // not linked stops the run with 251 (the runner-failed exit code) rather than letting it run unstyled.
+  if not TStyleManager.TrySetStyle( 'Aqua Light Slate', False ) then
+  begin
+    System.Writeln( 'Aqua Light Slate VCL style is not linked into this runner - UI tests must run styled' );
+    Halt( 251 );
+  end;
+  TStyleManager.UseParentPaintBuffers := True;
 
   try
     TDUnitX.CheckCommandLine;
