@@ -48,7 +48,7 @@ uses
   Winapi.Windows,
   System.SysUtils, System.Classes, System.Generics.Collections, System.Threading,
   Data.DB,
-  Vcl.Imaging.Jpeg, Vcl.Imaging.PngImage, Vcl.Imaging.GIFImg, Vcl.Graphics, Vcl.Printers,
+  Vcl.Imaging.jpeg, Vcl.Imaging.pngimage, Vcl.Imaging.GIFImg, Vcl.Graphics, Vcl.Printers,
   Jxl.Graphic;
 
 resourcestring

@@ -103,8 +103,8 @@ copy /Y "$(BDS)\Redist\$(Platform)\sk4d.dll" "$(MSBuildProjectDirectory)\$(Platf
         <VerInfo_MajorVer>1</VerInfo_MajorVer>
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
-        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage tests;FileVersion=1.0.0.1;InternalName=gllImageTests;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=gllImageTests.exe;ProductName=gllImage;ProductVersion=1.0.0.1;Comments=</VerInfo_Keys>
-        <VerInfo_Build>1</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage tests;FileVersion=1.0.0.3;InternalName=gllImageTests;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=gllImageTests.exe;ProductName=gllImage;ProductVersion=1.0.0.3;Comments=</VerInfo_Keys>
+        <VerInfo_Build>3</VerInfo_Build>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
         <AppDPIAwarenessMode>unaware</AppDPIAwarenessMode>
@@ -129,8 +129,8 @@ copy /Y "$(BDS)\Redist\$(Platform)\sk4d.dll" "$(MSBuildProjectDirectory)\$(Platf
         <VerInfo_MajorVer>1</VerInfo_MajorVer>
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
-        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage tests;FileVersion=1.0.0.74;InternalName=gllImageTests;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=gllImageTests.exe;ProductName=gllImage;ProductVersion=1.0.0.74;Comments=</VerInfo_Keys>
-        <VerInfo_Build>74</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage tests;FileVersion=1.0.0.77;InternalName=gllImageTests;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=gllImageTests.exe;ProductName=gllImage;ProductVersion=1.0.0.77;Comments=</VerInfo_Keys>
+        <VerInfo_Build>77</VerInfo_Build>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
         <AppDPIAwarenessMode>unaware</AppDPIAwarenessMode>

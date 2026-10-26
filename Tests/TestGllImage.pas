@@ -16,7 +16,7 @@ uses
   System.Classes, System.SysUtils,
   Data.DB, Datasnap.DBClient,
   Winapi.Windows, Winapi.Messages, Winapi.ShlObj, Winapi.ActiveX,
-  Vcl.Graphics, Vcl.Imaging.Jpeg, Vcl.Forms,
+  Vcl.Graphics, Vcl.Imaging.jpeg, Vcl.Forms,
   DUnitX.TestFramework,
   Jxl.Api.Types, Jxl.Graphic,
   gllImage.Utils, gllImage.View, gllImage.DB;
@@ -227,7 +227,7 @@ implementation
 
 uses
   System.IOUtils, System.Types,
-  Vcl.Imaging.PngImage,
+  Vcl.Imaging.pngimage,
   gllImage.Consts, gllImage.DragDrop,
   MidasLib;
 

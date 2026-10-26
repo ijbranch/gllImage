@@ -1176,7 +1176,7 @@ implementation
 
 uses
   System.IOUtils,
-  Vcl.Clipbrd, Vcl.Imaging.Jpeg, Vcl.Imaging.PngImage,
+  Vcl.Clipbrd, Vcl.Imaging.jpeg, Vcl.Imaging.pngimage,
   Jxl.Graphic,
   gllImage.DragDrop;
 
