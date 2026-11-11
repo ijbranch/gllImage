@@ -58,7 +58,7 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
-        <Custom_Styles>&quot;Aqua Light Slate|VCLSTYLE|$(BDSCOMMONDIR)\Styles\AquaLightSlate.vsf&quot;</Custom_Styles>
+        <Custom_Styles>&quot;Windows Modern MountainMist|VCLSTYLE|$(BDSCOMMONDIR)\Styles\WindowsModernMountainMist.vsf&quot;</Custom_Styles>
         <DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>.\$(Platform)\$(Config)</DCC_ExeOutput>
         <DCC_E>false</DCC_E>
@@ -129,8 +129,8 @@ copy /Y "$(BDS)\Redist\$(Platform)\sk4d.dll" "$(MSBuildProjectDirectory)\$(Platf
         <VerInfo_MajorVer>1</VerInfo_MajorVer>
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
-        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage tests;FileVersion=1.0.0.79;InternalName=gllImageTests;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=gllImageTests.exe;ProductName=gllImage;ProductVersion=1.0.0.79;Comments=</VerInfo_Keys>
-        <VerInfo_Build>79</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=Ian Branch;FileDescription=gllImage tests;FileVersion=1.0.0.80;InternalName=gllImageTests;LegalCopyright=Copyright (c) 2026 Ian Branch;LegalTrademarks=;OriginalFilename=gllImageTests.exe;ProductName=gllImage;ProductVersion=1.0.0.80;Comments=</VerInfo_Keys>
+        <VerInfo_Build>80</VerInfo_Build>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
         <AppDPIAwarenessMode>unaware</AppDPIAwarenessMode>
